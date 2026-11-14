@@ -5,9 +5,23 @@
 FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 3);
 #endif
 
-// HYPOTHESIS: the article data type the class info fetches for kind 5; only passed as a pointer, the
-// layout is unreconstructed (mirror of the blaster family's data role).
-struct wnLinkBowArrowData;
+// HYPOTHESIS: field names from their use in the arrow's status process (wn_link_bow_arrow_status_uniq_process.cpp).
+struct wnLinkBowArrowParam {
+    s32 unk0;
+    s32 m_holdLife;     // +0x04: life while the arrow is nocked (status 0)
+    float m_speedMin;   // +0x08: flight speed without charge
+    float m_speedMax;   // +0x0C: flight speed at full charge
+    float m_flyLifeMin; // +0x10
+    float m_flyLifeMax; // +0x14
+    s32 m_stuckLife;    // +0x18: life once the arrow sticks (status 2)
+    float m_gravity;    // +0x1C
+};
+
+struct wnLinkBowArrowData {
+    s32 m_resGroupNo; // HYPOTHESIS: as the other articles' data blocks.
+    u8 unk4[0x30];
+    const wnLinkBowArrowParam* m_param; // +0x34
+};
 struct wnArticleBuildInfo;
 
 #ifdef WN_LINK_BOW_ARROW_FULL_BUILDER
@@ -46,10 +60,6 @@ public:
     soModuleAccesser* getModuleAccesser();
 };
 #endif
-
-struct wnLinkBowArrowData {
-    s32 m_resGroupNo; // HYPOTHESIS: as the other articles' data blocks; the rest is uninterpreted.
-};
 
 class wnLinkBowArrow : public wnWeaponBuilder<wnLinkBowArrowModuleAccesserBuildConfig> {
 public:
