@@ -18,9 +18,10 @@ public:
 wnPitBowArrowStatusUniqProcessFly g_wnPitBowArrowStatusUniqProcessFly;
 
 void wnPitBowArrowStatusUniqProcessFly::initStatus(soModuleAccesser* moduleAccesser) {
-    float chargeFrame = moduleAccesser->getWorkManageModule().getFloat(0x21000000);
+    // Life of the flight: constant 0xfa5 plus constant 0xfa6 per frame the shot was charged (work float 0x21000000).
     int life = static_cast<int>(soValueAccesser::getConstantFloat(moduleAccesser, 0xfa5, 0) +
-                                chargeFrame * soValueAccesser::getConstantFloat(moduleAccesser, 0xfa6, 0));
+                                soValueAccesser::getConstantFloat(moduleAccesser, 0xfa6, 0) *
+                                    moduleAccesser->getWorkManageModule().getFloat(0x21000000));
     moduleAccesser->getWorkManageModule().setInt(life, 0x20000000);
     wnKineticEnergyNormal& energy = dynamic_cast<wnKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(0));
     float speed;
