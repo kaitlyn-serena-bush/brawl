@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wn/wn_weapon_builder.h>
-#ifdef WN_LINK_BOW_ARROW_FULL_BUILDER
+#if defined(WN_LINK_BOW_ARROW_FULL_BUILDER) && !defined(WN_MARIO_FIREBALL_UNIT) // the article unit itself expands the vector
 FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 3);
 #endif
 
@@ -29,7 +29,23 @@ public:
     typedef wnStatusModuleBuildConfig<3, soGeneralWorkBuildConfig<2, 2, 1>, 3, soTransitionModuleBuildConfig<wnStatusTransitionTypeList> >
         StatusModuleBuildConfig;
     typedef wnAnimCmdModuleSubBuildConfigDefault<1, 3, 0, 0, 1, 3, 0, 0, 1, 3, 0, 0, 1, 3, 0, 0> AnimCmdModuleSubBuildConfig;
+#ifdef WN_ZELDA_LIGHTING_BOW_UNIT
+    typedef soGenerateArticleManageModuleBuilder<soGenerateArticleManageModuleBuildConfigNull> GenerateArticleManageModuleBuilder;
+#endif
 };
+
+#ifdef WN_ZELDA_LIGHTING_BOW_UNIT
+template <>
+class soModuleAccesserBuilder<wnLinkBowArrowModuleAccesserBuildConfig> : public utUnCopyable {
+public:
+    typedef wnLinkBowArrowModuleAccesserBuildConfig BC;
+    WN_ZELDA_LIGHTING_BOW_BUILDER_MEMBERS
+
+    soModuleAccesserBuilder(StageObject* owner, const wnModuleAccesserBuildData& bd);
+    ~soModuleAccesserBuilder();
+    soModuleAccesser* getModuleAccesser();
+};
+#endif
 
 struct wnLinkBowArrowData {
     s32 m_resGroupNo; // HYPOTHESIS: as the other articles' data blocks; the rest is uninterpreted.
