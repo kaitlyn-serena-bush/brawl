@@ -246,7 +246,8 @@ static inline void setLaunchSpeed(soModuleAccesser* acc, float lr) {
     float angle = soValueAccesser::getConstantFloat(acc, 0xfa0, 0);
     float speedMin = soValueAccesser::getConstantFloat(acc, 0xfa1, 0);
     float speedMax = soValueAccesser::getConstantFloat(acc, 0xfa2, 0);
-    float speed = speedMin + wnLucarioAuraBall::getChargeRate(acc) * (speedMax - speedMin);
+    float rate = wnLucarioAuraBall::getChargeRate(acc);
+    float speed = speedMin + rate * (speedMax - speedMin);
     float vx = lr * (speed * static_cast<float>(cos(angle)));
     float vy = speed * static_cast<float>(sin(angle));
     Vec2f velocity(vx, vy);
