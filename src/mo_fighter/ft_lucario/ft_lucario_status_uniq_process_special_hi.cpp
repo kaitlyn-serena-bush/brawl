@@ -314,9 +314,10 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
 
 // When a turn ends the flight direction is mirrored and the rush restarts with the speed constant 0xfbd.
 void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAccesser) {
-    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
-    soTurnModule& turnModule = *static_cast<soTurnModule*>(moduleAccesser->m_enumerationStart->m_turnModule);
-    soKineticModule& kinetic = moduleAccesser->getKineticModule();
+    const soModuleEnumeration& modules = *moduleAccesser->m_enumerationStart;
+    soWorkManageModule& work = *modules.m_workManageModule;
+    soTurnModule& turnModule = *static_cast<soTurnModule*>(modules.m_turnModule);
+    soKineticModule& kinetic = *modules.m_kineticModule;
     bool turning = turnModule.isTurn();
     bool wasTurning = work.isFlag(0x22000015);
     work.setFlag(turning, 0x22000015);
@@ -325,11 +326,16 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         float y = sin(direction);
         float x = cos(direction);
         direction = atan2(y, -x);
-        float magnitude = fabs(direction);
+        double wide = fabs(direction);
+        float magnitude = wide;
         if (magnitude <= 0.05f) {
             direction = 0.0f;
-        } else if (static_cast<float>(fabs(3.1415927f - magnitude)) <= 0.05f) {
-            direction = 3.1415927f;
+        } else {
+            wide = fabs(3.1415927f - magnitude);
+            magnitude = wide;
+            if (magnitude <= 0.05f) {
+                direction = 3.1415927f;
+            }
         }
         work.setFloat(direction, 0x21000005);
         Vec2f speed;
@@ -339,20 +345,26 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
         stop.m_speed = speed;
         stop.enable();
-        work.setFloat(-work.getFloat(0x21000004), 0x21000004);
-        work.setFloat(-work.getFloat(0x21000008), 0x21000008);
-        work.setFloat(-work.getFloat(0x21000006), 0x21000006);
+        float lr = work.getFloat(0x21000004);
+        work.setFloat(-lr, 0x21000004);
+        float speedX = work.getFloat(0x21000008);
+        work.setFloat(-speedX, 0x21000008);
+        float stickX = work.getFloat(0x21000006);
+        work.setFloat(-stickX, 0x21000006);
     }
 }
 
 // Leans the two body nodes 0x12e and 0x12f into the flight direction (work float 0x21000005, radians).
 void ftLucarioStatusUniqProcessSpecialHiRush::set_pose(soModuleAccesser* moduleAccesser) {
     float direction = moduleAccesser->getWorkManageModule().getFloat(0x21000005);
-    float magnitude = fabs(direction);
+    double wide = fabs(direction);
+    float magnitude = wide;
     float lean;
     float tilt;
     float lr;
-    if (static_cast<float>(fabs(magnitude - 1.5707964f)) > 1.1920929e-7f) {
+    double wideOff = fabs(magnitude - 1.5707964f);
+    float off = wideOff;
+    if (off > 1.1920929e-7f) {
         if (magnitude < 1.5707964f) {
             lean = 1.5707964f - direction;
             tilt = 1.5707964f + -direction;
