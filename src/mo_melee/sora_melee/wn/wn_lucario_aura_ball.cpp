@@ -156,7 +156,7 @@ static inline void holdAtHand(soModuleAccesser* acc, Vec3f* out) {
     *out = pos;
 }
 
-void wnLucarioAuraBall::notifyEventCollisionAttack(float power, soCollisionLog* collisionLog, soModuleAccesser* moduleAccesser) {
+void wnLucarioAuraBall::notifyEventCollisionAttack(float power, const soCollisionLog* collisionLog, soModuleAccesser* moduleAccesser) {
     gfTask* task = gfTaskScheduler::getInstance()->getTaskById(static_cast<gfTask::Category>(collisionLog->m_taskCategory),
                                                                 collisionLog->m_taskId);
     switch (collisionLog->m_kind) {

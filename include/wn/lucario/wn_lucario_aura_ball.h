@@ -123,7 +123,7 @@ public:
     // HYPOTHESIS: the order of the integer and float parameters (the native code only fixes each kind's order).
     void activate(int founderTaskId, int team, float lr, int chargeFrame, float chargeScale, int fighterKind);
     virtual void onDeactivate();
-    virtual void notifyEventCollisionAttack(float power, soCollisionLog* collisionLog, soModuleAccesser* moduleAccesser);
+    virtual void notifyEventCollisionAttack(float power, const soCollisionLog* collisionLog, soModuleAccesser* moduleAccesser);
     virtual bool notifyEventCollisionAttackCheck(u32 flags);
     static float getChargeRate(soModuleAccesser* moduleAccesser);
     // HYPOTHESIS: arguments are the fighter's facing, a work float and the fighter's scale.
