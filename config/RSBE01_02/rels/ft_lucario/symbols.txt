@@ -95,7 +95,7 @@ __dt__74soGroundModuleBuilder<49soGroundModuleBuildConfig<1,18soGroundModuleImpl
 __dt__77soPostureModuleBuilder<51soPostureModuleBuildConfig<1,19soPostureModuleImpl>>Fv = .text:0x000044BC; // type:function size:0x74
 __dt__73soModelModuleBuilder<49soModelModuleBuildConfig<5,0,17soModelModuleImpl>>Fv = .text:0x00004530; // type:function size:0x6C
 __dt__107soResourceModuleBuilder<80soResourceModuleBuildConfig<0,24soResourceIdAccesserImpl,20soResourceModuleImpl>>Fv = .text:0x0000459C; // type:function size:0x78
-__dt__26soArrayVectorCalcInterfaceFv = .text:0x00004614; // type:function size:0x40 scope:weak
+__dt__20soResourceIdAccesserFv = .text:0x00004614; // type:function size:0x40 scope:weak
 __dt__96soParamCustomizeModuleBuilder<63soParamCustomizeModuleBuildConfig<26soParamCustomizeModuleImpl>>Fv = .text:0x00004654; // type:function size:0x40 scope:weak
 __dt__66soHeapModuleBuilder<43soHeapModuleBuildConfig<16soHeapModuleImpl>>Fv = .text:0x00004694; // type:function size:0x5C
 __dt__180soInsideEventManageModuleBuilder<110soInsideEventManageModuleBuildConfig<16,32,4,2,4,4,4,4,2,4,4,4,4,4,1,1,0,0,0,30wnInsideEventManageModuleTypes>,30wnInsideEventManageModuleTypes>Fv = .text:0x000046F0; // type:function size:0x12C

@@ -570,6 +570,7 @@ bool ftLucario::activeArticle(wnLucarioQigong* weapon, soModuleAccesser* acc) {
 
 #pragma dont_inline on
 soTeam::~soTeam() { }
+soResourceIdAccesser::~soResourceIdAccesser() { }
 #pragma dont_inline off
 soArticleMediator::~soArticleMediator() { }
 #pragma dont_inline on
