@@ -104,26 +104,39 @@ bool ftLucarioTransactor::activeArticle(soArticle* article, soModuleAccesser* ac
     return false;
 }
 
-// Starts the aura ball with the stored charge (none when no charge was saved).
 static inline Fighter& getFighter(soModuleAccesser* moduleAccesser) {
     Fighter& fighter = dynamic_cast<Fighter&>(*moduleAccesser->m_stageObject);
     return fighter;
 }
 
+static inline int getFounderTaskId(Fighter& fighter) {
+    return fighter.getTaskId();
+}
+
+static inline int getFighterKind(Fighter& fighter) {
+    int kind = fighter.getFtKind();
+    return kind;
+}
+
+static inline int getFighterTeam(Fighter& fighter) {
+    int team = fighter.getOwner()->getTeam();
+    return team;
+}
+
+// Starts the aura ball with the stored charge (none when no charge was saved).
 bool ftLucarioTransactor::activeArticle1(wnLucarioAuraBall* weapon, soModuleAccesser* acc) {
     Fighter& fighter = getFighter(acc);
     int chargeFrame = 0;
-    int kind;
     float chargeScale = 0.0f;
     if (!loadAuraBallStatus(acc, &chargeFrame, NULL)) {
         chargeFrame = 0;
     }
     chargeScale = acc->getWorkManageModule().getFloat(0x11000013);
-    soPostureModule* const posture = &acc->getPostureModule();
-    int founderTaskId = fighter.getTaskId();
-    kind = fighter.getFtKind();
-    int team = fighter.getOwner()->getTeam();
-    weapon->activate(founderTaskId, team, posture->getLr(), chargeFrame, chargeScale, kind);
+    soPostureModule& posture = acc->getPostureModule();
+    int founderTaskId = getFounderTaskId(fighter);
+    int kind = getFighterKind(fighter);
+    int team = getFighterTeam(fighter);
+    weapon->activate(founderTaskId, team, posture.getLr(), chargeFrame, chargeScale, kind);
     return true;
 }
 
