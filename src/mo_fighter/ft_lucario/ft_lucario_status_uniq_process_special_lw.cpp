@@ -61,14 +61,18 @@ void ftLucarioStatusUniqProcessSpecialLwSplit::initStatus(soModuleAccesser* modu
 
 // BYTES: nw4r::math::FSelect is never expanded at the optimization level of the fighter units (-O2,s), so the two
 // selects of the clamp are written with the instruction itself, as in the Pikachu units.
-static inline float clampRate(register float value, register float low, register float high) {
-    register float difference;
-    register float bounded;
+static inline float clampRate(register float value) {
+    register float one;
+    register float zero;
     register float result;
-    difference = value - low;
-    asm { fsel bounded, difference, value, low }
-    difference = bounded - high;
-    asm { fsel result, difference, high, bounded }
+    register float bounded;
+    register float difference;
+    zero = 0.0f;
+    one = 1.0f;
+    difference = value - zero;
+    asm { fsel bounded, difference, value, zero }
+    difference = bounded - one;
+    asm { fsel result, difference, one, bounded }
     return result;
 }
 
@@ -130,7 +134,7 @@ void ftLucarioStatusUniqProcessSpecialLwAppear::initStatus(soModuleAccesser* mod
     float stickAbs = static_cast<float>(fabs(stickX));
     if (stickAbs >= deadZone) {
         rate = (stickAbs - deadZone) / (1.0f - deadZone);
-        rate = clampRate(rate, 0.0f, 1.0f);
+        rate = clampRate(rate);
         lr = stickX > 0.0f ? -1.0f : 1.0f;
     } else {
         rate = 0.0f;
