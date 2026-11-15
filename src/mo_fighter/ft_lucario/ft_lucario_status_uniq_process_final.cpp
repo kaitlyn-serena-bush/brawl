@@ -3,6 +3,7 @@
 #define MT_VEC3F_CTOR_NOINLINE
 #define MT_VEC3F_ASSIGN_NOINLINE
 #define MT_VEC3F_MUL_INLINE
+#define MT_VEC3F_ADD_NATIVE_ORDER // BYTES: the paired-single sum leaves its result in the right operand registers here (mt_vector.h)
 #include <cm/cm_camera_controller.h>
 #include <so/camera/so_camera_module_impl.h>
 #include <so/collision/so_collision_attack_module_impl.h>
@@ -99,6 +100,39 @@ void ftLucarioStatusUniqProcessFinalAttack::initStatus(soModuleAccesser* moduleA
     camera(moduleAccesser);
     moduleAccesser->getWorkManageModule().setInt(0, 0x20000001);
 }
+// Bursts where the beam meets the stage: up to five hits along the beam's direction (work float 0x21000004, degrees)
+// from the hand node, each followed 5 units further on.
+static inline void burstAlongBeam(soModuleAccesser* moduleAccesser, soWorkManageModule& work) {
+    soGroundModule& ground = moduleAccesser->getGroundModule();
+    soEffectModule& effect = moduleAccesser->getEffectModule();
+    soModelModule& model = moduleAccesser->getModelModule();
+    float z = ground.getZ();
+    Vec3f start;
+    start = model.getNodeGlobalPosition(model.getCorrectNodeId(0x12e), true);
+    start.m_z = z;
+    float c;
+    float angle = work.getFloat(0x21000004) - 90.0f;
+    angle = 0.017453292f * angle;
+    Vec3f dir;
+    soPostureModule& posture = moduleAccesser->getPostureModule();
+    c = cos(angle);
+    dir.m_x = -1.0f * c * posture.getLr();
+    dir.m_y = sin(angle);
+    dir.m_z = 0.0f;
+    Vec3f ray;
+    ray = dir * 500.0f;
+    for (int i = 0; i < 5; i++) {
+        Vec3f hitPos;
+        Vec3f hitNormal;
+        if (!ground.rayCheck(&start, &ray, &hitPos, &hitNormal, true)) {
+            break;
+        }
+        hitPos.m_z = z;
+        effect.req(static_cast<EfID>(0xfc0003), &hitPos, &Vec3f(0.0f, 0.0f, 0.0f), 1.0f, 0, -1);
+        start = hitPos + dir * 5.0f;
+    }
+}
+
 void ftLucarioStatusUniqProcessFinalAttack::execStatus(soModuleAccesser* moduleAccesser) {
     rotate(moduleAccesser);
     soCollisionAttackModule& collisionAttack = moduleAccesser->getCollisionAttackModule();
@@ -106,32 +140,7 @@ void ftLucarioStatusUniqProcessFinalAttack::execStatus(soModuleAccesser* moduleA
     if (collisionAttack.isAttack(0, 0)) {
         work.decInt(0x20000001);
         if (work.getInt(0x20000001) <= 0) {
-            soGroundModule& ground = moduleAccesser->getGroundModule();
-            soEffectModule& effect = moduleAccesser->getEffectModule();
-            soModelModule& model = moduleAccesser->getModelModule();
-            float z = ground.getZ();
-            Vec3f start;
-            start = model.getNodeGlobalPosition(model.getCorrectNodeId(0x12e), true);
-            start.m_z = z;
-            float angle = work.getFloat(0x21000004) - 90.0f;
-            angle = 0.017453292f * angle;
-            Vec3f dir;
-            float c = cos(angle);
-            dir.m_x = -1.0f * c * moduleAccesser->getPostureModule().getLr();
-            dir.m_y = sin(angle);
-            dir.m_z = 0.0f;
-            Vec3f ray;
-            ray = dir * 500.0f;
-            for (int i = 0; i < 5; i++) {
-                Vec3f hitPos;
-                Vec3f hitNormal;
-                if (!ground.rayCheck(&start, &ray, &hitPos, &hitNormal, true)) {
-                    break;
-                }
-                hitPos.m_z = z;
-                effect.req(static_cast<EfID>(0xfc0003), &hitPos, &Vec3f(0.0f, 0.0f, 0.0f), 1.0f, 0, -1);
-                start = hitPos + dir * 5.0f;
-            }
+            burstAlongBeam(moduleAccesser, work);
             work.setInt(10, 0x20000001);
         }
     }
