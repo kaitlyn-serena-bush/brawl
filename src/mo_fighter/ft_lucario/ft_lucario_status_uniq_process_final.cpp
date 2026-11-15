@@ -17,8 +17,6 @@
 #include <types.h>
 #include <math.h>
 
-// HYPOTHESIS: clampf(value, min, max) of ft_lucario.o per the map; it stays fn_ in the ft_lucario.cpp unit.
-extern "C" float fn_118_8F8C(float value, float min, float max);
 
 void rotate(soModuleAccesser* moduleAccesser);
 void camera(soModuleAccesser* moduleAccesser);
@@ -167,11 +165,11 @@ void rotate(soModuleAccesser* moduleAccesser) {
         double wide = fabs(stickX);
         stickX = wide;
     }
-    dir *= fn_118_8F8C((stickX - stickMin) / (stickMax - stickMin), 0.0f, 1.0f);
+    dir *= clampf((stickX - stickMin) / (stickMax - stickMin), 0.0f, 1.0f);
     float speed = soValueAccesser::getConstantFloat(moduleAccesser, 0xfcc, 0);
     float limit = soValueAccesser::getConstantFloat(moduleAccesser, 0xfcb, 0);
     float angle = work.getFloat(0x21000004);
-    work.setFloat(fn_118_8F8C(angle + speed * dir * (-1.0f * posture.getLr()), -limit, limit), 0x21000004);
+    work.setFloat(clampf(angle + speed * dir * (-1.0f * posture.getLr()), -limit, limit), 0x21000004);
     if (0.0f != dir && work.getInt(0x20000001) > 3) {
         work.setInt(3, 0x20000001);
     }

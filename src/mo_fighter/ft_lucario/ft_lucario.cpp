@@ -7,6 +7,7 @@
 #define WN_ARTICLE_MANAGE_BUILDER_OUT_OF_LINE
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
+#include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
 #include <so/so_module_hyp.h>
 #include <so/so_value_accesser.h>
@@ -15,6 +16,10 @@
 #include <ft/lucario/ft_lucario_extend_param_accesser.h>
 #include <ft/lucario/ft_lucario_transactor.h>
 #include <so/article/so_article_mediator.h>
+#include <ft/ft_manager.h>
+#include <ft/ft_owner.h>
+#include <so/so_slow.h>
+#include <math.h>
 
 // The fighter owns the shared out-of-line kinetic teardown.
 #undef WN_ARTICLE_NATIVE_BUILDERS
@@ -430,13 +435,15 @@ void ftLucario::notifyEventChangeSituation(SituationKind kind, SituationKind pre
     Fighter::notifyEventChangeSituation(kind, prevKind, moduleAccesser);
 }
 
-// clampf (the map name); src/mo_fighter/ft_lucario/ft_lucario_status_uniq_process_final.cpp calls it by this stand-in name.
-extern "C" float fn_118_8F8C(float value, float min, float max);
+float clampf(float value, float min, float max) {
+    value = __fsel(value - min, value, min);
+    return __fsel(value - max, max, value);
+}
 
 float ftLucario::calcAuraScale() {
     const float* parameters = static_cast<const float*>(m_data->extendParam[1]);
     float aura = m_moduleAccesser->getWorkManageModule().getFloat(0x11000013);
-    float rate = fn_118_8F8C((aura - parameters[1]) / (parameters[3] - parameters[1]), 0.0f, 1.0f);
+    float rate = clampf((aura - parameters[1]) / (parameters[3] - parameters[1]), 0.0f, 1.0f);
     float remaining = 1.0f - rate;
     return parameters[0] + (parameters[2] - parameters[0]) * (1.0f - remaining * remaining);
 }
@@ -456,4 +463,186 @@ void ftLucario::setAuraScale(float scale) {
     Vec3f auraScale(scale, scale, scale);
     effects.setScale(firstEffect, &auraScale);
     effects.setScale(secondEffect, &auraScale);
+}
+
+// The status processes whose pose helpers the node update calls.
+class ftLucarioStatusUniqProcessSpecialHiRush {
+public:
+    static void set_pose(soModuleAccesser* moduleAccesser);
+};
+class ftLucarioStatusUniqProcessFinalHold {
+public:
+    static void set_rot_angle(soModuleAccesser* moduleAccesser);
+};
+
+void ftLucario::onStart(int unk) {
+    soModuleAccesser* acc = m_moduleAccesser;
+    soWorkManageModule& work = acc->getWorkManageModule();
+    float rate = getAuraPowerRate(acc);
+    work.setFloat(rate, 0x11000013);
+    work.setFloat(rate, 0x11000014);
+    setAuraScale(calcAuraScale());
+    Fighter::onStart(unk);
+    ftLucarioTransactor::getInstance()->init_auraball(acc);
+    if (getOwner()->getSpycloak()) {
+        m_moduleAccesser->getWorkManageModule().setInt(0, 0x10000047);
+        m_moduleAccesser->getWorkManageModule().setInt(0, 0x10000048);
+    } else {
+        // The aura flames on both hands, scaled with the aura.
+        soEffectModule& effects = m_moduleAccesser->getEffectModule();
+        float scale = calcAuraScale();
+        int firstEffect = effects.reqFollow(static_cast<EfID>(0x220001), 0x1f, &Vec3f(0.0f, 0.0f, 0.0f), &Vec3f(0.0f, 0.0f, 0.0f), scale,
+                                            true, 0x10, 0, -1);
+        int secondEffect = effects.reqFollow(static_cast<EfID>(0x220001), 0x35, &Vec3f(0.0f, 0.0f, 0.0f), &Vec3f(0.0f, 0.0f, 0.0f), scale,
+                                             true, 0x10, 0, -1);
+        m_moduleAccesser->getWorkManageModule().setInt(firstEffect, 0x10000047);
+        m_moduleAccesser->getWorkManageModule().setInt(secondEffect, 0x10000048);
+    }
+    m_moduleAccesser->getEffectModule().removeCommon(0x1a);
+    m_moduleAccesser->getWorkManageModule().setFlag(true, 0x1200003F);
+}
+
+// Rescales the aura flames when the aura power changed since the last frame.
+inline void ftLucario::updateAuraScale(soModuleAccesser* moduleAccesser) {
+    ftLucario& fighter = dynamic_cast<ftLucario&>(moduleAccesser->getStageObject());
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    float previous = work.getFloat(0x11000014);
+    float current = work.getFloat(0x11000013);
+    if (current != previous) {
+        fighter.setAuraScale(fighter.calcAuraScale());
+        work.setFloat(current, 0x11000014);
+    }
+}
+
+void ftLucario::processUpdate() {
+    Fighter::processUpdate();
+    if (soSlow::getInstance()->isEstimate() == true) {
+        soModuleAccesser* acc = m_moduleAccesser;
+        soWorkManageModule& work = acc->getWorkManageModule();
+        work.setFloat(work.getFloat(0x11000013), 0x11000014);
+        work.setFloat(getAuraPowerRate(acc), 0x11000013);
+        updateAuraScale(acc);
+        ftLucarioTransactor::getInstance()->processUpdate(acc);
+    }
+}
+
+void ftLucario::updateNodeSRT() {
+    soModuleAccesser* acc = m_moduleAccesser;
+    switch (acc->getStatusModule().getStatusKind()) {
+    case 0x11b:
+        ftLucarioStatusUniqProcessSpecialHiRush::set_pose(acc);
+        break;
+    case 0x122:
+    case 0x123:
+    case 0x124:
+        ftLucarioStatusUniqProcessFinalHold::set_rot_angle(acc);
+        break;
+    }
+    float size = acc->getPostureModule().getScale();
+    Vec3f scale;
+    scale.m_z = size;
+    scale.m_y = size;
+    scale.m_x = size;
+    Vec3f rotation;
+    Vec3f position;
+    position = acc->getPostureModule().getPos();
+    rotation = acc->getPostureModule().getRot(0);
+    rotation.m_y += acc->getPostureModule().getRotYLr();
+    acc->getModelModule().setNodeSRT(0, &scale, &rotation, &position);
+}
+
+// HYPOTHESIS: the catch request (event 8) of a fighter Lucario grabs with the Force Palm (status 0x113): the receiver
+// marks it done and answers with the node it is held by and Lucario's work int 0x10000033.
+struct ftLucarioLinkEventCatch : soLinkEventArgs {
+    int m_nodeId; // +0x8
+    int m_request;
+    int unk10;
+    int unk14;
+    int unk18;
+};
+
+void ftLucario::notifyEventLink(soLinkEventArgs* eventInfo, soModuleAccesser* moduleAccesser, StageObject* stageObj, int unk4) {
+    soStatusModule& status = moduleAccesser->getStatusModule();
+    switch (eventInfo->m_eventKind) {
+    case 8:
+        if (status.getStatusKind() == 0x113) {
+            ftLucarioLinkEventCatch* event = static_cast<ftLucarioLinkEventCatch*>(eventInfo);
+            event->m_nodeId = moduleAccesser->getModelModule().getCorrectNodeId(0x12c);
+            event->_0x4 = true;
+            event->unk18 = moduleAccesser->getWorkManageModule().getInt(0x10000033);
+            status.changeStatusRequest(0x11a, moduleAccesser);
+            return;
+        }
+        break;
+    }
+    Fighter::notifyEventLink(eventInfo, moduleAccesser, stageObj, unk4);
+}
+
+float ftLucario::getAuraPowerRate(soModuleAccesser* moduleAccesser) {
+    if (g_ftManager->m_isStamina) {
+        return getAuraPowerRateHpMode(moduleAccesser);
+    }
+    return getAuraPowerRateNormal(moduleAccesser);
+}
+
+// The rate grows from parameters[0] to 1 up to the damage parameters[3] and on to parameters[1] at parameters[4].
+float ftLucario::getAuraPowerRateNormal(soModuleAccesser* moduleAccesser) {
+    const float* parameters = static_cast<const float*>(g_ftCommonDataAccesser.getData(Fighter_Lucario)->extendParam[2]);
+    float damage = moduleAccesser->getDamageModule().getDamage(0);
+    float rate;
+    if (damage <= parameters[3]) {
+        rate = parameters[0] +
+               (1.0f - parameters[0]) * clampf((damage - parameters[2]) / (parameters[3] - parameters[2]), 0.0f, 1.0f);
+    } else {
+        rate = 1.0f + (parameters[1] - 1.0f) * clampf((damage - parameters[3]) / (parameters[4] - parameters[3]), 0.0f, 1.0f);
+    }
+    float handicap = clampf(soValueAccesser::getConstantFloat(moduleAccesser, 0xdb2, 0), -1.0f, 1.0f);
+    return clampf(parameters[5] * (rate / (1.0f + 0.5f * handicap)), parameters[7], parameters[6]);
+}
+
+// The stamina match version: the rate falls with the remaining share of the hit points.
+float ftLucario::getAuraPowerRateHpMode(soModuleAccesser* moduleAccesser) {
+    Fighter& fighter = dynamic_cast<Fighter&>(moduleAccesser->getStageObject());
+    const float* parameters = static_cast<const float*>(g_ftCommonDataAccesser.getData(Fighter_Lucario)->extendParam[7]);
+    float hitPointMax = fighter.getOwner()->getHitPointMax();
+    float hitPoint = fighter.getOwner()->getHitPoint();
+    float percent = clampf(100.0f * (fabsf(hitPointMax) > 1.1920929e-7f ? hitPoint / hitPointMax : 1.0f), 0.0f, 100.0f);
+    float rate;
+    if (hitPointMax <= 1.0f) {
+        rate = parameters[1];
+    } else if (percent <= parameters[3]) {
+        rate = parameters[1] -
+               (parameters[1] - 1.0f) * clampf((percent - parameters[4]) / (parameters[3] - parameters[4]), 0.0f, 1.0f);
+    } else {
+        rate = 1.0f - (1.0f - parameters[0]) * clampf((percent - parameters[3]) / (parameters[2] - parameters[3]), 0.0f, 1.0f);
+    }
+    float handicap = clampf(soValueAccesser::getConstantFloat(moduleAccesser, 0xdb2, 0), -1.0f, 1.0f);
+    rate /= 1.0f + 0.5f * handicap;
+    return clampf(rate, parameters[6], parameters[5]);
+}
+
+// The Aura Sphere of the Force Palm starts in front of the fighter (the offsets differ on the ground and in the air)
+// with the current aura power.
+bool ftLucario::activeArticle(wnLucarioQigong* weapon, soModuleAccesser* acc) {
+    Fighter& fighter = dynamic_cast<Fighter&>(acc->getStageObject());
+    soPostureModule& posture = acc->getPostureModule();
+    float lr = posture.getLr();
+    Vec3f pos = acc->getPostureModule().getPos();
+    Vec3f offset(0.0f, 0.0f, 0.0f);
+    if (acc->getSituationModule().getKind() == 0) {
+        offset.m_x = 0.0f;
+        offset.m_y = soValueAccesser::getConstantFloat(acc, 0xfb5, 0);
+        offset.m_z = soValueAccesser::getConstantFloat(acc, 0xfb4, 0);
+    } else {
+        offset.m_x = 0.0f;
+        offset.m_y = soValueAccesser::getConstantFloat(acc, 0xfb7, 0);
+        offset.m_z = soValueAccesser::getConstantFloat(acc, 0xfb6, 0);
+    }
+    offset *= posture.getScale();
+    pos.m_x += offset.m_z * lr;
+    pos.m_y += offset.m_y;
+    float powerMul = acc->getWorkManageModule().getFloat(0x11000013);
+    int founderTaskId = fighter.getTaskId();
+    weapon->activate(founderTaskId, fighter.getOwner()->getTeam(), &pos, lr, powerMul);
+    return false;
 }
