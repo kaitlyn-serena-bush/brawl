@@ -112,14 +112,15 @@ bool ftLucarioTransactor::activeArticle(soArticle* article, soModuleAccesser* ac
 bool ftLucarioTransactor::activeArticle1(wnLucarioAuraBall* weapon, soModuleAccesser* acc) {
     Fighter& fighter = dynamic_cast<Fighter&>(*acc->m_stageObject);
     int chargeFrame = 0;
+    float chargeScale = 0.0f;
     if (!loadAuraBallStatus(acc, &chargeFrame, NULL)) {
         chargeFrame = 0;
     }
-    float chargeScale = acc->getWorkManageModule().getFloat(0x11000013);
+    chargeScale = acc->getWorkManageModule().getFloat(0x11000013);
+    soPostureModule& posture = acc->getPostureModule();
     int founderTaskId = fighter.getTaskId();
     int kind = fighter.getFtKind();
     int team = fighter.getOwner()->getTeam();
-    soPostureModule& posture = acc->getPostureModule();
     weapon->activate(founderTaskId, team, posture.getLr(), chargeFrame, chargeScale, kind);
     return true;
 }
