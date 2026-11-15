@@ -394,7 +394,7 @@ public:
 void ftLucario::onActivate() { }
 
 void ftLucario::onStart(int unk) {
-    soModuleAccesser* acc = m_moduleAccesser;
+    soModuleAccesser* acc = getModuleAccesser();
     soWorkManageModule& work = acc->getWorkManageModule();
     float rate = getAuraPowerRate(acc);
     work.setFloat(rate, 0x11000013);
@@ -435,7 +435,7 @@ inline void ftLucario::updateAuraScale(soModuleAccesser* moduleAccesser) {
 void ftLucario::processUpdate() {
     Fighter::processUpdate();
     if (soSlow::getInstance()->isEstimate() == true) {
-        soModuleAccesser* acc = m_moduleAccesser;
+        soModuleAccesser* acc = getModuleAccesser();
         soWorkManageModule& work = acc->getWorkManageModule();
         work.setFloat(work.getFloat(0x11000013), 0x11000014);
         work.setFloat(getAuraPowerRate(acc), 0x11000013);
