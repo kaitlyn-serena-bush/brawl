@@ -26006,7 +26006,7 @@ notifyEventCollisionAttack__17wnLucarioAuraBallFfP14soCollisionLogP16soModuleAcc
 notifyEventCollisionAttackCheck__17wnLucarioAuraBallFUl = .text:0x0039F238; // type:function size:0x78
 shoot__17wnLucarioAuraBallFfff = .text:0x0039F2B0; // type:function size:0x678
 getChargeRate__17wnLucarioAuraBallFP16soModuleAccesser = .text:0x0039F928; // type:function size:0xDC
-getChargeLevel__17wnLucarioAuraBallFv = .text:0x0039FA04; // type:function size:0xAC
+getChargeLevel__17wnLucarioAuraBallCFv = .text:0x0039FA04; // type:function size:0xAC
 getChargeFrame__17wnLucarioAuraBallFv = .text:0x0039FAB0; // type:function size:0x24
 setEffectScale__17wnLucarioAuraBallFP16soModuleAccesser = .text:0x0039FAD4; // type:function size:0x1D0
 updateNodeSRT__17wnLucarioAuraBallFv = .text:0x0039FCA4; // type:function size:0x41C

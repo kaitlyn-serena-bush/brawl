@@ -283,7 +283,7 @@ float wnLucarioAuraBall::getChargeRate(soModuleAccesser* moduleAccesser) {
     return clampf(rate, 0.0f, 1.0f);
 }
 
-int wnLucarioAuraBall::getChargeLevel() {
+int wnLucarioAuraBall::getChargeLevel() const {
     const ftLucarioAuraBallParam* param = getAuraBallParam(m_moduleAccesser);
     int level = m_moduleAccesser->getWorkManageModule().getInt(0x10000005) / param->m_chargeLevelFrame;
     if (level < 0) {
