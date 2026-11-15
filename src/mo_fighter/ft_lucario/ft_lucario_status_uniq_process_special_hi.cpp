@@ -296,6 +296,19 @@ void ftLucarioStatusUniqProcessSpecialHiRush::exitStatus(soModuleAccesser* modul
 }
 
 
+// Leaves for the kept status; the bound status 0x11d starts without vertical speed.
+static inline void changeNextStatus(soModuleAccesser* moduleAccesser) {
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    if (work.isFlag(0x22000014)) {
+        int status = work.getInt(0x20000001);
+        moduleAccesser->getStatusModule().changeStatusRequest(status, moduleAccesser);
+        if (status == 0x11d) {
+            speed_mul(1.0f, 0.0f, moduleAccesser);
+        }
+        clearNextStatus(moduleAccesser);
+    }
+}
+
 // The rush ends when its motion ends (0x11c), at a ledge (0x73) or against a surface (check_dir).
 void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser* moduleAccesser) {
     soGroundModule& ground = moduleAccesser->getGroundModule();
@@ -333,15 +346,7 @@ void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser* modul
                !check_dir(4, true, -1.0f, moduleAccesser)) {
         check_dir(1, false, 0.0f, moduleAccesser);
     }
-    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
-    if (work.isFlag(0x22000014)) {
-        int status = work.getInt(0x20000001);
-        moduleAccesser->getStatusModule().changeStatusRequest(status, moduleAccesser);
-        if (status == 0x11d) {
-            speed_mul(1.0f, 0.0f, moduleAccesser);
-        }
-        clearNextStatus(moduleAccesser);
-    }
+    changeNextStatus(moduleAccesser);
 }
 
 void ftLucarioStatusUniqProcessSpecialHiRushEnd::initStatus(soModuleAccesser* moduleAccesser) {
