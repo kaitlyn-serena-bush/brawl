@@ -7,6 +7,7 @@
 #define WN_ARTICLE_MANAGE_BUILDER_OUT_OF_LINE
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
+#define WN_KINETIC_MEDIATOR_INLINE_DTOR
 #define MT_VEC3F_SCALE_XY_IN_PLACE
 #define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
 #include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
@@ -34,7 +35,12 @@
 template soArrayVector<s32, 8>::~soArrayVector();
 #endif
 #pragma dont_inline off
+// The articles' sound builder teardown inlines this empty destructor (same form as ft_pit.cpp and ft_snake.cpp).
+inline soSound3dGeneratorAccesserImpl::~soSound3dGeneratorAccesserImpl() { }
+
 soStatusModuleImpl::~soStatusModuleImpl() { }
+
+ftKineticEnergyController::~ftKineticEnergyController() { }
 
 // HYPOTHESIS: unnamed status process instances (not yet named in symbols.txt).
 extern "C" {
@@ -269,13 +275,6 @@ bool ftLucarioArticleMediator::shoot(soModuleAccesser* acc, soArticle* article) 
     }
 }
 
-
-// FIXME: Test code present only to emit the shared builder functions; delete once ftLucario is done
-void testBuilder() {
-    soInsideEventManageModuleBuilder<ftLucarioInsideEventManageModuleBuildConfig, ftInsideEventManageModuleTypes> insideBuilder;
-    soResourceIdAccesserImpl idAccImpl(0, 1, 2);
-}
-soInsideEventManageModuleBuilder<ftLucarioInsideEventManageModuleBuildConfig, ftInsideEventManageModuleTypes> g_insideBuilder;
 
 // Trivial functions of this translation unit (empty virtuals, constant returns, field accessors) under their placeholder names.
 extern "C" {
