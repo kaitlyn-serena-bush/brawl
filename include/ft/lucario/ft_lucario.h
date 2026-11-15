@@ -77,6 +77,7 @@ public:
     static float getAuraPowerRateNormal(soModuleAccesser* moduleAccesser);
     static float getAuraPowerRateHpMode(soModuleAccesser* moduleAccesser);
     static void updateAuraScale(soModuleAccesser* moduleAccesser);
+    virtual void onActivate();
     virtual void onStart(int unk);
     virtual void processUpdate();
     virtual void updateNodeSRT();
