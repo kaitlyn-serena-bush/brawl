@@ -241,12 +241,13 @@ static inline void steer(soModuleAccesser* moduleAccesser) {
             if (amount < 0.0f) {
                 rate *= -1.0f;
             }
-            float direction = turnWork.getFloat(0x21000005);
-            direction = direction + 0.017453292f * soValueAccesser::getConstantFloat(moduleAccesser, 0xfbe, 0) * rate;
-            turnWork.setFloat(direction, 0x21000005);
+            float current = turnWork.getFloat(0x21000005);
+            float turnMax = soValueAccesser::getConstantFloat(moduleAccesser, 0xfbe, 0);
+            rate = current + 0.017453292f * turnMax * rate;
+            turnWork.setFloat(rate, 0x21000005);
             soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3));
             Vec2f newSpeed;
-            Vec2f::copy(newSpeed, get_vector(direction, stop.getSpeed().length()));
+            Vec2f::copy(newSpeed, get_vector(rate, stop.getSpeed().length()));
             stop.m_speed = newSpeed;
         }
     }
@@ -256,7 +257,8 @@ static inline void steer(soModuleAccesser* moduleAccesser) {
 void ftLucarioStatusUniqProcessSpecialHiRush::execStatus(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3));
-    if (work.getInt(0x20000000) > soValueAccesser::getConstantInt(moduleAccesser, 0x5dc2, 0)) {
+    int frame = work.getInt(0x20000000);
+    if (frame > soValueAccesser::getConstantInt(moduleAccesser, 0x5dc2, 0)) {
         if (!work.isFlag(0x22000013)) {
             float mul = soValueAccesser::getConstantFloat(moduleAccesser, 0xfc0, 0);
             speed_mul(mul, mul, moduleAccesser);
@@ -270,7 +272,8 @@ void ftLucarioStatusUniqProcessSpecialHiRush::execStatus(soModuleAccesser* modul
     steer(moduleAccesser);
     float stickX = moduleAccesser->getControllerModule().getStickX();
     if (static_cast<float>(fabs(stickX)) >= soValueAccesser::getConstantFloat(moduleAccesser, 0xc2d, 0)) {
-        moduleAccesser->getWorkManageModule().setFloat(stickX > 0.0f ? 1.0f : -1.0f, 0x21000008);
+        float side = stickX > 0.0f ? 1.0f : -1.0f;
+        moduleAccesser->getWorkManageModule().setFloat(side, 0x21000008);
     }
 }
 
