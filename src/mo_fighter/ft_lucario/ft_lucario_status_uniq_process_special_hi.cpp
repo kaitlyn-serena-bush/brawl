@@ -2,7 +2,6 @@
 // BYTES: Extreme Speed calls the out-of-line Vec2f assignment.
 #define MT_VEC2F_ASSIGN_NOINLINE
 #define MT_VEC3F_CTOR_NOINLINE
-#define MATH_ATAN2F_NOINLINE // BYTES: atan2f is called as this unit's weak copy
 #define MT_VEC2F_COPY_MEMBERWISE // BYTES: Vec2f::copy moves the two floats one by one in this unit (speed_mul_energy)
 #include <ft/lucario/ft_lucario.h>
 #include <ft/ft_kinetic_energy.h>
@@ -71,22 +70,6 @@ extern ftLucarioStatusUniqProcessSpecialHiRush g_ftLucarioStatusUniqProcessSpeci
 
 float dotProduct(Vec2f* a, Vec2f* b);
 
-// A flight direction within 0.05 rad of level is made exactly level (0 or pi).
-static inline float snapDirection(float direction) {
-    double wide = fabs(direction);
-    float magnitude = wide;
-    if (magnitude <= 0.05f) {
-        direction = 0.0f;
-    } else {
-        wide = fabs(3.1415927f - magnitude);
-        magnitude = wide;
-        if (magnitude <= 0.05f) {
-            direction = 3.1415927f;
-        }
-    }
-    return direction;
-}
-
 // The status the rush leaves for is kept in work int 0x20000001 while the flag 0x22000014 is set.
 static inline void setNextStatus(soModuleAccesser* moduleAccesser, int status) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
@@ -111,23 +94,6 @@ static inline float clampRate(register float value, register float low, register
     difference = bounded - high;
     asm { fsel result, difference, high, bounded }
     return result;
-}
-
-// The rush follows the ground while it touches it and flies free otherwise; its speeds are capped at 10.
-static inline void setRushKinetic(soGroundModule& ground, soKineticModule& kinetic, soModuleAccesser* moduleAccesser) {
-    if (ground.isTouch(8, 0)) {
-        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(1), 0);
-        kinetic.changeKinetic(0xd, moduleAccesser);
-    } else {
-        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(5), 0);
-        kinetic.changeKinetic(0xd, moduleAccesser);
-    }
-    soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
-    stop.m_speedLimit = Vec2f(10.0f, 10.0f);
-    stop.m_speedTarget = Vec2f(10.0f, 10.0f);
-    ftKineticEnergyGravity& gravity = dynamic_cast<ftKineticEnergyGravity&>(*kinetic.getEnergy(1));
-    gravity.unk1C = 10.0f;
-    gravity.m_fallSpeedMax = 10.0f;
 }
 
 // The start of the move: the horizontal speed is divided by the constant 0xfb8, the fall stops.
@@ -202,7 +168,18 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
             } else if (direction <= -3.1415927f) {
                 direction += 6.2831855f;
             }
-            direction = snapDirection(direction);
+            // A direction within 0.05 rad of level is made exactly level.
+            double wide = fabs(direction);
+            float magnitude = wide;
+            if (magnitude <= 0.05f) {
+                direction = 0.0f;
+            } else {
+                wide = fabs(3.1415927f - magnitude);
+                magnitude = wide;
+                if (magnitude <= 0.05f) {
+                    direction = 3.1415927f;
+                }
+            }
             Vec2f::copy(velocity, get_vector(direction, speed));
         } else {
             situation.setKind(static_cast<SituationKind>(2), false);
@@ -222,7 +199,21 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
         gravity.m_gravity = 0.0f;
         gravity.disable();
     }
-    setRushKinetic(moduleAccesser->getGroundModule(), kinetic, moduleAccesser);
+    soGroundModule& ground = moduleAccesser->getGroundModule();
+    // The rush follows the ground while it touches it and flies free otherwise; its speeds are capped at 10.
+    if (ground.isTouch(8, 0)) {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(1), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    } else {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(5), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    }
+    soKineticEnergyNormal& limited = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
+    limited.m_speedLimit = Vec2f(10.0f, 10.0f);
+    limited.m_speedTarget = Vec2f(10.0f, 10.0f);
+    ftKineticEnergyGravity& fall = dynamic_cast<ftKineticEnergyGravity&>(*kinetic.getEnergy(1));
+    fall.unk1C = 10.0f;
+    fall.m_fallSpeedMax = 10.0f;
     soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
     stop.m_speed = velocity;
     stop.enable();
@@ -299,7 +290,20 @@ void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser* modul
     if (moduleAccesser->getMotionModule().isEnd()) {
         setNextStatus(moduleAccesser, 0x11c);
     }
-    setRushKinetic(ground, kinetic, moduleAccesser);
+    // The rush follows the ground while it touches it and flies free otherwise; its speeds are capped at 10.
+    if (ground.isTouch(8, 0)) {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(1), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    } else {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(5), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    }
+    soKineticEnergyNormal& limited = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
+    limited.m_speedLimit = Vec2f(10.0f, 10.0f);
+    limited.m_speedTarget = Vec2f(10.0f, 10.0f);
+    ftKineticEnergyGravity& fall = dynamic_cast<ftKineticEnergyGravity&>(*kinetic.getEnergy(1));
+    fall.unk1C = 10.0f;
+    fall.m_fallSpeedMax = 10.0f;
     if (moduleAccesser->getSituationModule().getKind() == 0 && ground.isTouch(8, 0)) {
         Vec2f speed = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3)).getSpeed();
         if (speed.length() > 1.1920929e-7f) {
@@ -411,7 +415,6 @@ void speed_mul(float x, float y, soModuleAccesser* moduleAccesser) {
 }
 
 // The map name is Vec2f::dotProduct; the symbol keeps the free-function spelling it has in symbols.txt.
-inline float dotProduct(Vec2f* a, Vec2f* b) __attribute__((never_inline));
 inline float dotProduct(Vec2f* a, Vec2f* b) {
     return a->m_x * b->m_x + a->m_y * b->m_y;
 }
@@ -463,10 +466,6 @@ bool check_attach(float lr, soModuleAccesser* moduleAccesser) {
     return false;
 }
 
-static inline s16 getAngle16(const Vec2f& direction) {
-    return static_cast<s16>(32768.0f * (static_cast<float>(atan2(direction.m_y, direction.m_x)) / 3.1415927f));
-}
-
 // A surface met head-on ends the rush (in a wall cling when allowed, else in the bound status 0x11d); a surface met
 // at a shallow angle bends the flight along it by at most the constant 0xfbe.
 bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAccesser) {
@@ -492,7 +491,9 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
                 soWorkManageModule& work = moduleAccesser->getWorkManageModule();
                 float turnMax = soValueAccesser::getConstantFloat(moduleAccesser, 0xfbe, 0);
                 Vec2f wallDirection = wall;
-                s16 difference = getAngle16(velocity) - getAngle16(wallDirection);
+                s16 velocityAngle = static_cast<s16>(32768.0f * (static_cast<float>(atan2(velocity.m_y, velocity.m_x)) / 3.1415927f));
+                s16 wallAngle = static_cast<s16>(32768.0f * (static_cast<float>(atan2(wallDirection.m_y, wallDirection.m_x)) / 3.1415927f));
+                s16 difference = velocityAngle - wallAngle;
                 int quarter;
                 if (difference < 0) {
                     quarter = difference + 0x4000;
@@ -533,7 +534,18 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         float y = sin(direction);
         float x = cos(direction);
         direction = atan2(y, -x);
-        direction = snapDirection(direction);
+        // A direction within 0.05 rad of level is made exactly level.
+        double wide = fabs(direction);
+        float magnitude = wide;
+        if (magnitude <= 0.05f) {
+            direction = 0.0f;
+        } else {
+            wide = fabs(3.1415927f - magnitude);
+            magnitude = wide;
+            if (magnitude <= 0.05f) {
+                direction = 3.1415927f;
+            }
+        }
         work.setFloat(direction, 0x21000005);
         Vec2f speed;
         Vec2f::copy(speed, get_vector(direction, soValueAccesser::getConstantFloat(moduleAccesser, 0xfbd, 0)));
