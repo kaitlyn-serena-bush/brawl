@@ -78,18 +78,15 @@ void ftLucarioStatusUniqProcessFinalEntry::initStatus(soModuleAccesser* moduleAc
 void ftLucarioStatusUniqProcessFinalEntry::execStatus(soModuleAccesser* moduleAccesser) {
     soMotionModule& motion = moduleAccesser->getMotionModule();
     soPostureModule& posture = moduleAccesser->getPostureModule();
+    Vec3f startPos;
     Vec3f kirifudaPos;
     g_Stage->getKirifudaPos(&kirifudaPos, 0);
-    Vec3f startPos;
     startPos = kirifudaPos;
     startPos.m_y = 100.0f + CameraController::getInstance()->m_stageCameraBounds.m_up;
     float frame = motion.getFrame();
     float t = sin(1.5707964f * (frame / motion.getEndFrame()));
-    float rest = 1.0f - t;
     Vec3f pos;
-    pos.m_x = kirifudaPos.m_x * t + startPos.m_x * rest;
-    pos.m_y = kirifudaPos.m_y * t + startPos.m_y * rest;
-    pos.m_z = kirifudaPos.m_z * t + startPos.m_z * rest;
+    Vec3fBlend(&pos, &startPos, &kirifudaPos, t);
     posture.setPos(&pos);
 }
 

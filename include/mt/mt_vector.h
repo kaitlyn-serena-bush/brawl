@@ -421,6 +421,26 @@ public:
         }
         // clang-format on
     }
+    // out = from * (1 - t) + to * t in paired singles (the blend of Lucario's Final Smash entry).
+    // HYPOTHESIS: the name and parameter order; the instruction sequence is the native one.
+    friend void Vec3fBlend(register Vec3f* pOut, register const Vec3f* from, register const Vec3f* to, register float t) {
+        register f32 outZ, outXY, toZ, toXY, fromZ, fromXY;
+        register f32 rest = 1.0f - t;
+        // clang-format off
+        asm {
+            psq_l     fromXY, Vec3f.m_x(from), 0, 0
+            psq_l     fromZ, Vec3f.m_z(from), 1, 0
+            psq_l     toXY, Vec3f.m_x(to), 0, 0
+            psq_l     toZ, Vec3f.m_z(to), 1, 0
+            ps_muls0  fromXY, fromXY, rest
+            ps_muls0  fromZ, fromZ, rest
+            ps_madds0 outXY, toXY, t, fromXY
+            ps_madds0 outZ, toZ, t, fromZ
+            psq_st    outXY, Vec3f.m_x(pOut), 0, 0
+            psq_st    outZ, Vec3f.m_z(pOut), 1, 0
+        }
+        // clang-format on
+    }
     // MATCH-ONLY: paired-single scale used by the generic article code (opt in with MT_VEC3F_MUL_INLINE).
     // Two register forms reproduce the callers: by default the products overwrite the loaded halves; a unit
     // that defines MT_VEC3F_SCALE_FRESH_REGS gives each load and each product its own register variable and
