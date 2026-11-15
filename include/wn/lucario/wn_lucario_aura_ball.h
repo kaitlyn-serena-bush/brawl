@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wn/wn_weapon_builder.h>
-#if defined(WN_WEAPON_BUILDER) && !defined(WN_MARIO_FIREBALL_UNIT) // the article unit itself expands the vector
+#ifdef FT_LUCARIO_ARTICLE_POOLS // the fighter unit calls sora_melee's teardown of the process vector; the article unit expands it
 FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 3);
 #endif
 
