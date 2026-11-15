@@ -55,8 +55,12 @@ struct ftLucarioAuraBallParam {
 
 // HYPOTHESIS: inline clamp helper (fsel based), as in ft_status_uniq_process_glide.cpp.
 static inline float clampf(float value, float lo, float hi) {
-    value = nw4r::math::FSelect(value - lo, value, lo);
-    return nw4r::math::FSelect(value - hi, hi, value);
+    float diff;
+    diff = value - lo;
+    value = nw4r::math::FSelect(diff, value, lo);
+    diff = value - hi;
+    value = nw4r::math::FSelect(diff, hi, value);
+    return value;
 }
 
 extern soStatusUniqProcess lbl_27_bss_89E4;
@@ -220,12 +224,10 @@ bool wnLucarioAuraBall::notifyEventCollisionAttackCheck(u32 flags) {
     return Weapon::notifyEventCollisionAttackCheck(flags);
 }
 
-inline void wnLucarioAuraBall::shootImpl(float lr, float unk, float scale) {
-    soModuleAccesser* acc = m_moduleAccesser;
-    soWorkManageModule& work = acc->getWorkManageModule();
+// Leaves the owner's hand: the ball keeps the hand position, takes the owner's depth and a neutral rotation.
+static inline void releaseFromHand(soModuleAccesser* acc) {
     Vec3f pos;
     holdAtHand(acc, &pos);
-    Vec2f velocity;
     acc->getWorkManageModule().setFloat(pos.m_x, 0x11000001);
     acc->getWorkManageModule().setFloat(pos.m_y, 0x11000002);
     pos.m_z = acc->getGroundModule().getZ();
@@ -236,28 +238,34 @@ inline void wnLucarioAuraBall::shootImpl(float lr, float unk, float scale) {
     Vec3f rot(0.0f, 0.0f, 0.0f);
     acc->getPostureModule().setRot(&rot, 0);
     acc->m_stageObject->updateNodeSRT();
-    acc->getPostureModule().setLr(lr);
-    acc->getStatusModule().changeStatusRequest(2, acc);
+}
+
+// The launch speed grows with the charge between the article's two speed constants.
+static inline void setLaunchSpeed(soModuleAccesser* acc, float lr) {
     wnKineticEnergyNormal& energy = dynamic_cast<wnKineticEnergyNormal&>(*acc->getKineticModule().getEnergy(0));
     float angle = soValueAccesser::getConstantFloat(acc, 0xfa0, 0);
     float speedMin = soValueAccesser::getConstantFloat(acc, 0xfa1, 0);
     float speedMax = soValueAccesser::getConstantFloat(acc, 0xfa2, 0);
-    float speed = speedMin + getChargeRate(acc) * (speedMax - speedMin);
+    float speed = speedMin + wnLucarioAuraBall::getChargeRate(acc) * (speedMax - speedMin);
     float vx = lr * (speed * static_cast<float>(cos(angle)));
     float vy = speed * static_cast<float>(sin(angle));
-    velocity.m_x = vx;
-    velocity.m_y = vy;
+    Vec2f velocity(vx, vy);
     energy.m_speed = velocity;
     energy.disable();
-    work.setFloat(scale, 0x1100000A);
-    setEffectScale(acc);
-    updateNodeSRT();
-    work.offFlag(0x12000000);
-    work.setFloat(unk, 0x11000009);
 }
 
 void wnLucarioAuraBall::shoot(float lr, float unk, float scale) {
-    shootImpl(lr, unk, scale);
+    soModuleAccesser* const acc = m_moduleAccesser;
+    soWorkManageModule* const work = &acc->getWorkManageModule();
+    releaseFromHand(acc);
+    acc->getPostureModule().setLr(lr);
+    acc->getStatusModule().changeStatusRequest(2, acc);
+    setLaunchSpeed(acc, lr);
+    work->setFloat(scale, 0x1100000A);
+    setEffectScale(acc);
+    updateNodeSRT();
+    work->offFlag(0x12000000);
+    work->setFloat(unk, 0x11000009);
 }
 
 float wnLucarioAuraBall::getChargeRate(soModuleAccesser* moduleAccesser) {
