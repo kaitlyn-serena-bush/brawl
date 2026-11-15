@@ -15,17 +15,22 @@ class ftLucarioStatusUniqProcessSpecialN : public soStatusUniqProcess {
 public:
     virtual ~ftLucarioStatusUniqProcessSpecialN() { }
     virtual void exitStatus(soModuleAccesser* moduleAccesser, int nextStatus);
+
+private:
+    static bool keepsCharge(soModuleAccesser* moduleAccesser, int origStatus, int nextStatus);
+    // The statuses that keep a charged aura ball when the charge is left for them (defined after the code, as the
+    // order of the unit's read-only data shows).
+    static const int s_keepStatuses[6];
 };
 
 ftLucarioStatusUniqProcessSpecialN g_ftLucarioStatusUniqProcessSpecialN;
 
 // Leaving the charge for one of these statuses keeps the charged aura ball (as a stored charge).
 // HYPOTHESIS: the routine boundary; the charge mark (common effect 0x1a) stays only when the hold status is left.
-static inline bool keepsCharge(soModuleAccesser* moduleAccesser, int origStatus, int nextStatus) {
+inline bool ftLucarioStatusUniqProcessSpecialN::keepsCharge(soModuleAccesser* moduleAccesser, int origStatus, int nextStatus) {
     if (origStatus == 0x117 || origStatus == 0x118) {
-        static const int keepStatuses[6] = {0x1a, 0x1e, 0x1f, 0x20, 0x21, 0x34};
         for (int i = 0; i < 6; i++) {
-            if (nextStatus == keepStatuses[i]) {
+            if (nextStatus == s_keepStatuses[i]) {
                 if (origStatus == 0x118) {
                     moduleAccesser->getEffectModule().reqCommon(0x1a, 0.0f);
                 }
@@ -84,3 +89,5 @@ void ftLucarioStatusUniqProcessSpecialN::exitStatus(soModuleAccesser* moduleAcce
         getLucarioTransactor()->saveAuraBallStatus(moduleAccesser, false, 0, 0);
     }
 }
+
+const int ftLucarioStatusUniqProcessSpecialN::s_keepStatuses[6] = {0x1a, 0x1e, 0x1f, 0x20, 0x21, 0x34};
