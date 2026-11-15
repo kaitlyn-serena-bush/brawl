@@ -17,6 +17,7 @@
 #include <so/so_value_accesser.h>
 #include <ft/ft_class_info_impl.h>
 #include <ft/lucario/ft_lucario.h>
+#include <ft/lucario/ft_lucario_data.h>
 #include <ft/lucario/ft_lucario_extend_param_accesser.h>
 #include <ft/lucario/ft_lucario_transactor.h>
 #include <so/article/so_article_mediator.h>
@@ -43,7 +44,10 @@ soStatusModuleImpl::~soStatusModuleImpl() { }
 
 ftKineticEnergyController::~ftKineticEnergyController() { }
 
-// HYPOTHESIS: unnamed status process instances (not yet named in symbols.txt).
+// The status process instances of the other units (unnamed objects of their .bss in symbols.txt). In the order of the
+// units' static initialisers: 254 SpecialS, 264 SpecialSThrow, 274 SpecialHi, 284 SpecialHiRush, 294 SpecialHiRushEnd,
+// 2A4 SpecialHiBound, 2B4 SpecialLw, 2C4 SpecialLwSplit, 2D4 SpecialLwAppear, 2E4 Final, 2F4 FinalEntry, 304 FinalHold,
+// 314 FinalAttack, 324 FinalEnd; lbl_27_bss_897C is sora_melee's g_ftLucarioStatusUniqProcessSpecialN.
 extern "C" {
 extern soStatusUniqProcess lbl_27_bss_897C;
 extern soStatusUniqProcess lbl_118_bss_254;
@@ -97,8 +101,7 @@ ftLucario::ftLucario(s32 entryId,
     processes[17] = &lbl_118_bss_314;
     processes[18] = &lbl_118_bss_324;
     m_moduleAccesser->getStatusModule().addRangeUniqProc(processes, 19);
-    // HYPOTHESIS: the common data record points at the fighter's shield shape group (+0x9c); it is installed as group 1.
-    m_moduleAccesser->getCollisionShieldModule().add(*reinterpret_cast<soCollisionShieldGroupData**>(reinterpret_cast<u8*>(m_data) + 0x9c), 1);
+    m_moduleAccesser->getCollisionShieldModule().add(static_cast<ftLucarioData*>(m_data)->m_shieldGroup, 1);
     getPhysicsModule(m_moduleAccesser).unk6C(0x13);
 }
 
@@ -521,7 +524,7 @@ float ftLucario::getAuraPowerRateNormal(soModuleAccesser* moduleAccesser) {
 // The stamina match version: the rate falls with the remaining share of the hit points.
 float ftLucario::getAuraPowerRateHpMode(soModuleAccesser* moduleAccesser) {
     Fighter& fighter = dynamic_cast<Fighter&>(moduleAccesser->getStageObject());
-    const float* parameters = static_cast<const float*>(g_ftCommonDataAccesser.getData(Fighter_Lucario)->extendParam[7]);
+    const float* parameters = static_cast<const ftLucarioData*>(g_ftCommonDataAccesser.getData(Fighter_Lucario))->m_auraHpModeParam;
     float hitPointMax = fighter.getOwner()->getHitPointMax();
     float hitPoint = fighter.getOwner()->getHitPoint();
     float percent = clampf(100.0f * (static_cast<float>(fabs(hitPointMax)) > 1.1920929e-7f ? hitPoint / hitPointMax : 1.0f), 0.0f, 100.0f);
