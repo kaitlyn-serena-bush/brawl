@@ -183,7 +183,8 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
             if (magnitude <= 0.05f) {
                 direction = 0.0f;
             } else {
-                magnitude = fabs(3.1415927f - magnitude);
+                magnitude = 3.1415927f - magnitude;
+                magnitude = fabs(magnitude);
                 if (magnitude <= 0.05f) {
                     direction = 3.1415927f;
                 }
@@ -556,7 +557,8 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         if (magnitude <= 0.05f) {
             direction = 0.0f;
         } else {
-            magnitude = fabs(3.1415927f - magnitude);
+            magnitude = 3.1415927f - magnitude;
+            magnitude = fabs(magnitude);
             if (magnitude <= 0.05f) {
                 direction = 3.1415927f;
             }
