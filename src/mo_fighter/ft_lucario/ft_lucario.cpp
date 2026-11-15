@@ -7,6 +7,7 @@
 #define WN_ARTICLE_MANAGE_BUILDER_OUT_OF_LINE
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
+#define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
 #include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
 #include <so/so_module_hyp.h>
@@ -435,9 +436,14 @@ void ftLucario::notifyEventChangeSituation(SituationKind kind, SituationKind pre
     Fighter::notifyEventChangeSituation(kind, prevKind, moduleAccesser);
 }
 
-float clampf(float value, float min, float max) {
-    value = __fsel(value - min, value, min);
-    return __fsel(value - max, max, value);
+// BYTES: nw4r::math::FSelect is never expanded at the optimization level of the fighter units (-O2,s; it stays a call),
+// so the two selects of the clamp are written with the instruction itself, as in the Pikachu units.
+float clampf(register float value, register float min, register float max) {
+    register float difference = value - min;
+    asm { fsel value, difference, value, min }
+    difference = value - max;
+    asm { fsel value, difference, max, value }
+    return value;
 }
 
 float ftLucario::calcAuraScale() {
