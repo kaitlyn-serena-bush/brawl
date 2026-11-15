@@ -19,7 +19,11 @@ inline float asinf(float x) {
 // scheduling on. Inlined expansions are unaffected (they are scheduled as part of their caller).
 #pragma push
 #pragma scheduling 603
-inline float atan2f(float x, float y) {
+inline float atan2f(float x, float y)
+#ifdef MATH_ATAN2F_NOINLINE
+    __attribute__((never_inline)) // BYTES: the unit calls its weak copy at every use (Lucario's Extreme Speed)
+#endif
+{
     return atan2(x, y);
 }
 #pragma pop
