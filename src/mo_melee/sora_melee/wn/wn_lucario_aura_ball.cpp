@@ -268,11 +268,17 @@ void wnLucarioAuraBall::shoot(float lr, float unk, float scale) {
     work->setFloat(unk, 0x11000009);
 }
 
+// The share of the full charge time that has passed (not yet limited to 0..1).
+static inline float getFrameRate(int frame, int maxFrame) {
+    float rate = static_cast<float>(frame) / static_cast<float>(maxFrame);
+    return rate;
+}
+
 float wnLucarioAuraBall::getChargeRate(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     const ftLucarioAuraBallParam* param = g_ftCommonDataAccesser.getLucarioAuraBallParam(work.getInt(0x10000009));
     int maxFrame = param->m_chargeLevelFrame * param->m_chargeLevelNum;
-    float rate = static_cast<float>(work.getInt(0x10000005)) / static_cast<float>(maxFrame);
+    float rate = getFrameRate(work.getInt(0x10000005), maxFrame);
     return clampf(rate, 0.0f, 1.0f);
 }
 
