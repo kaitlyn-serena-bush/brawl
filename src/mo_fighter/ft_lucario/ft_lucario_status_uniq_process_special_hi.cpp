@@ -56,8 +56,7 @@ public:
 };
 
 void set_end_param(soModuleAccesser* moduleAccesser);
-// HYPOTHESIS: map name set_end_lr(soModuleAccesser*); kept fn_ until its literal-pool order matches.
-extern "C" float fn_118_F1E4(soModuleAccesser* moduleAccesser);
+float set_end_lr(soModuleAccesser* moduleAccesser);
 // HYPOTHESIS: the map gives no parameter types; these follow the register use.
 bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAccesser);
 bool check_attach(float lr, soModuleAccesser* moduleAccesser);
@@ -68,7 +67,11 @@ void speed_mul_energy(soKineticModule* kineticModule, int energy, float x, float
 
 extern ftLucarioStatusUniqProcessSpecialHiRush g_ftLucarioStatusUniqProcessSpecialHiRush;
 
-float dotProduct(Vec2f* a, Vec2f* b);
+// The map name is Vec2f::dotProduct; the symbol keeps the free-function spelling it has in symbols.txt.
+inline float dotProduct(Vec2f* a, Vec2f* b) {
+    return a->m_x * b->m_x + a->m_y * b->m_y;
+}
+
 
 // The status the rush leaves for is kept in work int 0x20000001 while the flag 0x22000014 is set.
 static inline void setNextStatus(soModuleAccesser* moduleAccesser, int status) {
@@ -342,7 +345,7 @@ void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser* modul
 }
 
 void ftLucarioStatusUniqProcessSpecialHiRushEnd::initStatus(soModuleAccesser* moduleAccesser) {
-    fn_118_F1E4(moduleAccesser);
+    set_end_lr(moduleAccesser);
     soKineticEnergyNormal& energy = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3));
     Vec2f brake;
     brake.m_x = soValueAccesser::getConstantFloat(moduleAccesser, 0xfc1, 0);
@@ -364,7 +367,7 @@ void ftLucarioStatusUniqProcessSpecialHiRushEnd::exitStatus(soModuleAccesser* mo
 }
 
 void ftLucarioStatusUniqProcessSpecialHiBound::initStatus(soModuleAccesser* moduleAccesser) {
-    fn_118_F1E4(moduleAccesser);
+    set_end_lr(moduleAccesser);
     if (moduleAccesser->getSituationModule().getKind() == 0) {
         moduleAccesser->getKineticModule().changeKinetic(6, moduleAccesser);
     } else {
@@ -392,7 +395,8 @@ void set_end_param(soModuleAccesser* moduleAccesser) {
     work.onFlag(0x12000003);
 }
 
-extern "C" float fn_118_F1E4(soModuleAccesser* moduleAccesser) {
+// Faces the way the fighter was last steered (work float 0x21000008), or its stored facing without one.
+float set_end_lr(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     float speed = work.getFloat(0x21000008);
     float lr;
@@ -408,72 +412,6 @@ extern "C" float fn_118_F1E4(soModuleAccesser* moduleAccesser) {
     moduleAccesser->getPostureModule().setLr(lr);
     moduleAccesser->getPostureModule().updateRotYLr();
     return lr;
-}
-
-void set_landing_status(int frame, float rate, soModuleAccesser* moduleAccesser) {
-    moduleAccesser->getWorkManageModule().setFloat(frame, 0x11000000);
-    moduleAccesser->getWorkManageModule().setFloat(rate, 0x11000001);
-    moduleAccesser->getWorkManageModule().onFlag(0x12000003);
-}
-
-void speed_mul(float x, float y, soModuleAccesser* moduleAccesser) {
-    soKineticModule& kinetic = moduleAccesser->getKineticModule();
-    speed_mul_energy(&kinetic, 3, x, y);
-    speed_mul_energy(&kinetic, 2, x, y);
-    speed_mul_energy(&kinetic, 0, x, y);
-    speed_mul_energy(&kinetic, 1, x, y);
-}
-
-// The map name is Vec2f::dotProduct; the symbol keeps the free-function spelling it has in symbols.txt.
-inline float dotProduct(Vec2f* a, Vec2f* b) {
-    return a->m_x * b->m_x + a->m_y * b->m_y;
-}
-
-// The wall can be clung to when its slope is between the constants 0xc9d and 0xc9c.
-static inline bool isAttachAngle(soModuleAccesser* moduleAccesser, float angle) {
-    if (angle >= soValueAccesser::getConstantFloat(moduleAccesser, 0xc9c, 0) ||
-        angle <= soValueAccesser::getConstantFloat(moduleAccesser, 0xc9d, 0)) {
-        return false;
-    }
-    return true;
-}
-
-// The slope in degrees of the wall touched on the given side (90 for an upright wall).
-static inline float getWallSlope(soModuleAccesser* moduleAccesser, float lr) {
-    Vec2f normal(0.0f, 1.0f);
-    float sign;
-    if (lr >= 0.0f) {
-        Vec2f::copy(normal, moduleAccesser->getGroundModule().getTouchNormal(2, 0));
-        sign = -1.0f;
-    } else {
-        Vec2f::copy(normal, moduleAccesser->getGroundModule().getTouchNormal(4, 0));
-        sign = 1.0f;
-    }
-    return 90.0f + 57.29578f * (sign * atan2f(normal.m_x, normal.m_y));
-}
-
-// The rush ends in a wall cling when the stick is held away from a wall of the right slope on the given side.
-bool check_attach(float lr, soModuleAccesser* moduleAccesser) {
-    soGroundModule& ground = moduleAccesser->getGroundModule();
-    int clingCount = moduleAccesser->getWorkManageModule().getInt(0x1000000b);
-    float stickMin = soValueAccesser::getConstantFloat(moduleAccesser, 0xc97, 0);
-    float stickX = moduleAccesser->getControllerModule().getStickX();
-    if (clingCount <= 0 && static_cast<float>(fabs(stickX)) >= stickMin && stickX * lr < 0.0f) {
-        if (isAttachAngle(moduleAccesser, getWallSlope(moduleAccesser, lr))) {
-            if (!ground.isTouch(1, 0)) {
-                if (lr >= 0.0f) {
-                    if (ground.isAttachable(2, 0)) {
-                        return true;
-                    }
-                } else {
-                    if (ground.isAttachable(4, 0)) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
 }
 
 // The flight meets the touched surface head-on when it comes in steeper than the constant 0xfbf (degrees past 90
@@ -538,6 +476,59 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
         }
     }
     return false;
+}
+
+// The wall can be clung to when its slope is between the constants 0xc9d and 0xc9c.
+static inline bool isAttachAngle(soModuleAccesser* moduleAccesser, float angle) {
+    if (angle >= soValueAccesser::getConstantFloat(moduleAccesser, 0xc9c, 0) ||
+        angle <= soValueAccesser::getConstantFloat(moduleAccesser, 0xc9d, 0)) {
+        return false;
+    }
+    return true;
+}
+
+// The slope in degrees of the wall touched on the given side (90 for an upright wall).
+static inline float getWallSlope(soModuleAccesser* moduleAccesser, float lr) {
+    Vec2f normal(0.0f, 1.0f);
+    float sign;
+    if (lr >= 0.0f) {
+        Vec2f::copy(normal, moduleAccesser->getGroundModule().getTouchNormal(2, 0));
+        sign = -1.0f;
+    } else {
+        Vec2f::copy(normal, moduleAccesser->getGroundModule().getTouchNormal(4, 0));
+        sign = 1.0f;
+    }
+    return 90.0f + 57.29578f * (sign * atan2f(normal.m_x, normal.m_y));
+}
+
+// The rush ends in a wall cling when the stick is held away from a wall of the right slope on the given side.
+bool check_attach(float lr, soModuleAccesser* moduleAccesser) {
+    soGroundModule& ground = moduleAccesser->getGroundModule();
+    int clingCount = moduleAccesser->getWorkManageModule().getInt(0x1000000b);
+    float stickMin = soValueAccesser::getConstantFloat(moduleAccesser, 0xc97, 0);
+    float stickX = moduleAccesser->getControllerModule().getStickX();
+    if (clingCount <= 0 && static_cast<float>(fabs(stickX)) >= stickMin && stickX * lr < 0.0f) {
+        if (isAttachAngle(moduleAccesser, getWallSlope(moduleAccesser, lr))) {
+            if (!ground.isTouch(1, 0)) {
+                if (lr >= 0.0f) {
+                    if (ground.isAttachable(2, 0)) {
+                        return true;
+                    }
+                } else {
+                    if (ground.isAttachable(4, 0)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void set_landing_status(int frame, float rate, soModuleAccesser* moduleAccesser) {
+    moduleAccesser->getWorkManageModule().setFloat(frame, 0x11000000);
+    moduleAccesser->getWorkManageModule().setFloat(rate, 0x11000001);
+    moduleAccesser->getWorkManageModule().onFlag(0x12000003);
 }
 
 // When a turn ends the flight direction is mirrored and the rush restarts with the speed constant 0xfbd.
@@ -636,6 +627,14 @@ void ftLucarioStatusUniqProcessSpecialHiRush::set_pose(soModuleAccesser* moduleA
     turn(moduleAccesser);
 }
 
+void speed_mul(float x, float y, soModuleAccesser* moduleAccesser) {
+    soKineticModule& kinetic = moduleAccesser->getKineticModule();
+    speed_mul_energy(&kinetic, 3, x, y);
+    speed_mul_energy(&kinetic, 2, x, y);
+    speed_mul_energy(&kinetic, 0, x, y);
+    speed_mul_energy(&kinetic, 1, x, y);
+}
+
 // Scales the speed of one kinetic energy (the gravity energy only has a vertical speed).
 void speed_mul_energy(soKineticModule* kineticModule, int energy, float x, float y) {
     switch (energy) {
@@ -677,3 +676,8 @@ ftLucarioStatusUniqProcessSpecialHi g_ftLucarioStatusUniqProcessSpecialHi;
 ftLucarioStatusUniqProcessSpecialHiRush g_ftLucarioStatusUniqProcessSpecialHiRush;
 ftLucarioStatusUniqProcessSpecialHiRushEnd g_ftLucarioStatusUniqProcessSpecialHiRushEnd;
 ftLucarioStatusUniqProcessSpecialHiBound g_ftLucarioStatusUniqProcessSpecialHiBound;
+
+// The unit's read-only data ends with one more copy of pi/2 that no code reads: a constant with external linkage
+// defined after the code (the code's own uses come from the literal pool).
+// HYPOTHESIS: the name; the value is the upward direction the rush starts with.
+extern const float g_ftLucarioSpecialHiRushUpDirection = 1.5707964f;
