@@ -1,5 +1,8 @@
 // Use the native Fighter observer override before transitive Fighter includes;
 // this preserves the verified primary vtable slots of getOwner and getFtKind.
+#define FT_LUCARIO_TRANSACTOR_MELEE_INSTANCE // the shared sora_melee singleton accessor (ft_lucario_transactor.h)
+// BYTES: the singleton, its guard and its destructor registration keep separate addresses.
+#pragma pool_data off
 #define FT_MODULE_BUILDER
 #include <ft/ft_owner.h>
 #include <ft/fighter.h>
@@ -21,13 +24,6 @@
 ftLucarioTransactor::ftLucarioTransactor() { }
 ftLucarioTransactor::~ftLucarioTransactor() { }
 
-// The sora_melee copy of the singleton (the fighter REL has its own getInstance).
-// BYTES: the guard, the instance and its destructor registration keep separate addresses.
-#pragma pool_data off
-static inline ftLucarioTransactor* getLucarioTransactor() {
-    static ftLucarioTransactor instance;
-    return &instance;
-}
 
 // Kirby's copied aura ball is article 0xd, Lucario's own is article 0.
 static inline int getAuraBallArticleId(soModuleAccesser* moduleAccesser) {
