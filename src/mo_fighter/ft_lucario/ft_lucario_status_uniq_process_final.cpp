@@ -18,6 +18,8 @@
 #include <math.h>
 
 
+// The clamp of ft_lucario.cpp (the map name).
+float clampf(float value, float min, float max);
 void rotate(soModuleAccesser* moduleAccesser);
 void camera(soModuleAccesser* moduleAccesser);
 
