@@ -251,9 +251,7 @@ soArticle* ftLucarioArticleMediator::generate(s32 articleId, soModuleAccesser* a
 
 template <int S, int L>
 inline bool ftLucarioShootSlot0(soModuleAccesser* acc, soArticle* article, const soIntToType<S>&, const soIntToType<L>&) {
-    ftLucarioTransactor* transactor = ftLucarioTransactor::getInstance();
-    wnLucarioAuraBall* ball = dynamic_cast<wnLucarioAuraBall*>(article);
-    return transactor->shootArticle(ball, acc);
+    return ftLucarioTransactor::getInstance()->shootArticle(&dynamic_cast<wnLucarioAuraBall&>(*article), acc);
 }
 
 template <int S, int L>
