@@ -537,13 +537,18 @@ void set_landing_status(int frame, float rate, soModuleAccesser* moduleAccesser)
     moduleAccesser->getWorkManageModule().onFlag(0x12000003);
 }
 
+static inline soTurnModule* getTurnModule(const soModuleEnumeration& modules) {
+    soTurnModule* turnModule = static_cast<soTurnModule*>(modules.m_turnModule);
+    return turnModule;
+}
+
 // When a turn ends the flight direction is mirrored and the rush restarts with the speed constant 0xfbd.
 void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAccesser) {
     const soModuleEnumeration& modules = *moduleAccesser->m_enumerationStart;
     soWorkManageModule& work = *modules.m_workManageModule;
-    soTurnModule& turnModule = *static_cast<soTurnModule*>(modules.m_turnModule);
+    soTurnModule* turnModule = getTurnModule(modules);
     soKineticModule& kinetic = *modules.m_kineticModule;
-    bool turning = turnModule.isTurn();
+    bool turning = turnModule->isTurn();
     bool wasTurning = work.isFlag(0x22000015);
     work.setFlag(turning, 0x22000015);
     if (turning != wasTurning && !turning) {
