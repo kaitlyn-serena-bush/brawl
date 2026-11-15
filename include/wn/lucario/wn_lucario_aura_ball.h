@@ -1,6 +1,9 @@
 #pragma once
 
 #include <wn/wn_weapon_builder.h>
+#if defined(WN_WEAPON_BUILDER) && !defined(WN_MARIO_FIREBALL_UNIT) // the article unit itself expands the vector
+FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 3);
+#endif
 
 struct wnArticleBuildInfo;
 class soModuleAccesser;
