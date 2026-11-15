@@ -7,6 +7,7 @@
 #define WN_ARTICLE_MANAGE_BUILDER_OUT_OF_LINE
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
+#define MT_VEC3F_SCALE_XY_IN_PLACE
 #define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
 #include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
@@ -612,7 +613,7 @@ float ftLucario::getAuraPowerRateHpMode(soModuleAccesser* moduleAccesser) {
     const float* parameters = static_cast<const float*>(g_ftCommonDataAccesser.getData(Fighter_Lucario)->extendParam[7]);
     float hitPointMax = fighter.getOwner()->getHitPointMax();
     float hitPoint = fighter.getOwner()->getHitPoint();
-    float percent = clampf(100.0f * (fabsf(hitPointMax) > 1.1920929e-7f ? hitPoint / hitPointMax : 1.0f), 0.0f, 100.0f);
+    float percent = clampf(100.0f * (static_cast<float>(fabs(hitPointMax)) > 1.1920929e-7f ? hitPoint / hitPointMax : 1.0f), 0.0f, 100.0f);
     float rate;
     if (hitPointMax <= 1.0f) {
         rate = parameters[1];
@@ -644,11 +645,11 @@ bool ftLucario::activeArticle(wnLucarioQigong* weapon, soModuleAccesser* acc) {
         offset.m_y = soValueAccesser::getConstantFloat(acc, 0xfb7, 0);
         offset.m_z = soValueAccesser::getConstantFloat(acc, 0xfb6, 0);
     }
-    offset *= posture.getScale();
+    Vec3fScale(&offset, &offset, posture.getScale());
     pos.m_x += offset.m_z * lr;
     pos.m_y += offset.m_y;
     float powerMul = acc->getWorkManageModule().getFloat(0x11000013);
     int founderTaskId = fighter.getTaskId();
-    weapon->activate(founderTaskId, fighter.getOwner()->getTeam(), &pos, lr, powerMul);
+    weapon->activate(founderTaskId, fighter.getOwner()->getTeam(), lr, &pos, powerMul);
     return false;
 }

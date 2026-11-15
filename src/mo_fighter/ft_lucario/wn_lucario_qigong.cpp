@@ -24,7 +24,7 @@ wnLucarioQigong::wnLucarioQigong(s32 articleId, const wnArticleBuildInfo& info, 
 }
 
 // The aura sphere is activated at the position with the facing and the attack power multiplier of its charge.
-void wnLucarioQigong::activate(int founderTaskId, int team, const Vec3f* position, float lr, float powerMul) {
+void wnLucarioQigong::activate(int founderTaskId, int team, float lr, const Vec3f* position, float powerMul) {
     wnActivateDesc desc(founderTaskId, 0xFFFF, 0xFFFF, 0xFFFF, -1, -1, 0, 0, *position, lr, team, 0, 2, 0x80, 0, 0x35F,
                         0);
     desc.flagsHigh = 1;

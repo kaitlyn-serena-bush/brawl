@@ -58,5 +58,5 @@ public:
     wnLucarioQigong(s32 articleId, const wnArticleBuildInfo& info, const wnLucarioQigongData* data);
     virtual ~wnLucarioQigong() { }
     virtual bool notifyEventCollisionAttackCheck(u32 flags);
-    void activate(int founderTaskId, int team, const Vec3f* position, float lr, float powerMul);
+    void activate(int founderTaskId, int team, float lr, const Vec3f* position, float powerMul);
 };
