@@ -1,6 +1,7 @@
 #define IP_INPUT_BUTTON_RAW
 #define WN_WEAPON_BUILDER
 #define WN_ARTICLE_NATIVE_BUILDERS
+#define WN_TRANSITION_CTOR_INLINE
 #define WN_SHARED_ARRAYS_1
 #define WN_ARTICLE_ANIMCMD_INT
 #define FT_REL_LINK_EXTERN
@@ -35,4 +36,20 @@ void wnLucarioQigong::activate(int founderTaskId, int team, const Vec3f* positio
     soModuleAccesser* accesser = m_moduleAccesser;
     accesser->getStatusModule().changeStatusForce(0, accesser);
     accesser->getCollisionAttackModule().setPowerMul(powerMul);
+}
+
+// A reflected sphere changes sides: it takes the reflector's team and owner and keeps flying.
+bool wnLucarioQigong::notifyEventCollisionAttackCheck(u32 flags) {
+    if (flags & 0x10) {
+        return false;
+    }
+    if (flags & 8) {
+        int team = m_moduleAccesser->getReflectModule().getTeam();
+        m_moduleAccesser->getTeamModule().setTeam(team, true);
+        m_moduleAccesser->getTeamModule().setHitTeam(team);
+        soReflectModule& reflector = m_moduleAccesser->getReflectModule();
+        m_moduleAccesser->getTeamModule().setTeamOwnerId(reflector.getTaskId());
+        return false;
+    }
+    return true;
 }
