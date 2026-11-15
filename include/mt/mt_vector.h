@@ -205,7 +205,7 @@ public:
     }
 
     static void copy(Vec2f& dest, const Vec2f& src) {
-#ifdef MATCHING
+#if defined(MATCHING) && !defined(MT_VEC2F_COPY_MEMBERWISE)
         __memcpy(&dest, &src, sizeof(Vec2f));
 #else
         dest.m_x = src.m_x;
