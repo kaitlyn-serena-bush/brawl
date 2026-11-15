@@ -395,6 +395,30 @@ class soEventPresenter {
         return result != nullptr;
     }
 
+    s16 getPresenterUnitId() const { return m_unitID; }
+
+    // The list of the presenter's unit, or null when the unit has no observers or is not a unit of this observer type.
+    soInstanceManagerFullProperty<T*>* lookupObserverListSub() {
+        s16 uid = getPresenterUnitId();
+        soEventManager* mgr = soEventSystem::getInstance()->getManager(m_manageID);
+        if (mgr->getObserverCapacity(uid) == 0)
+            return NULL;
+        soEventUnitWrapper<T>* wrapper = dynamic_cast<soEventUnitWrapper<T>*>(mgr->getEventUnit(uid));
+        return (!wrapper) ? NULL : wrapper->getObserverListSub();
+    }
+
+    // The constructor's lookup: caches the list of a registered manager.
+    bool lookupObserverList() {
+        if (m_manageID <= -1 || !checkManageId())
+            return false;
+        if (soEventSystem::getInstance()->getManager(m_manageID)->getObserverCapacity(m_unitID) == 0) {
+            m_obsrvrList = nullptr;
+            return false;
+        }
+        m_obsrvrList = lookupObserverListSub();
+        return m_obsrvrList;
+    }
+
     bool getObserverListHelperLocal(soInstanceManagerFullProperty<T*>* list = nullptr) {
         if (m_manageID <= -1 || !checkManageId())
             return false;
@@ -427,11 +451,12 @@ public:
             getObserverListHelperLocal();
         }
     }
-    // HYPOTHESIS: constructor of the animation command interpreter. The list lookup is inlined with the result kept in a
-    // local that every path stores, and the manage ID is tested through the member.
+    // Constructor of the animation command interpreter's presenter (also the collision hit and model modules'): the
+    // manage ID is tested through the member and the list comes back from the lookup as a value. Checked against the
+    // original's standalone soAnimCmdInterpreter constructor (it_item.cpp, exact with this form).
     // MATCH-ONLY: the tag type selects this variant; the original has one constructor per presenter user.
     soEventPresenter(s16 manageId, s16 unitId, soEventPresenterLocalStoreTag) : m_manageID(manageId), m_unitID(unitId), m_obsrvrList(nullptr) {
-        if (m_manageID > 0) getObserverListHelperLocal(m_obsrvrList);
+        if (m_manageID > 0) lookupObserverList();
     }
     // doldecomp/brawl #152: presenter constructed from a manage id alone (team module).
     soEventPresenter(s16 manageId) : m_manageID(manageId), m_unitID(0), m_obsrvrList(nullptr) {

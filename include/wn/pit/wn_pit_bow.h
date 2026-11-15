@@ -4,7 +4,9 @@
 
 // HYPOTHESIS: the article data type the class info fetches for kind 90; only passed as a pointer, the
 // layout is unreconstructed (mirror of the blaster family's data role).
-struct wnPitBowData;
+struct wnPitBowData {
+    s32 m_resGroupNo; // HYPOTHESIS: as the other articles' data blocks; the rest is uninterpreted.
+};
 struct wnArticleBuildInfo;
 
 #if defined(WN_PIT_IKARUS_FULL_BUILDER) || defined(WN_PIT_BOW_FULL_BUILDER)
@@ -15,7 +17,8 @@ public:
     typedef soInsideEventManageModuleBuildConfig<16, 32, 4, 2, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 1, 1, 0, 0, 0, wnInsideEventManageModuleTypes>
         InsideEventManageModuleBuildConfig;
     typedef soModelModuleBuildConfig<5, 0, soModelModuleImpl> ModelModuleBuildConfig;
-    typedef soMotionModuleBuildConfig<2, soMotionModuleImpl, 0, 1, soTransitionModuleBuildConfig<wnMotionTransitionTypeList>,
+    // Sixteen motion data entries: the constructor sizes the motion table with 16.
+    typedef soMotionModuleBuildConfig<16, soMotionModuleImpl, 0, 1, soTransitionModuleBuildConfig<wnMotionTransitionTypeList>,
                                       soMotionAnimObjCacheModuleBuildConfig<0, soMotionAnimObjCacheModuleNull> > MotionModuleBuildConfig;
     typedef soPostureModuleBuildConfig<0, soPostureModuleSimple> PostureModuleBuildConfig;
     typedef soGroundModuleBuildConfigNull GroundModuleBuildConfig;
@@ -33,7 +36,10 @@ public:
     typedef soColorBlendModuleBuildConfig<-1, 0, soColorBlendModuleImpl> ColorBlendModuleBuildConfig;
 };
 
-// No common energies, as the cape's builder.
+// No common energies, as the cape's builder. The bow's own unit builds it from the generic template
+// (WN_WEAPON_NO_COMMON_ENERGIES gives it this layout); the fighter unit, which owns articles with the common energies as
+// well, uses this copy.
+#ifndef WN_WEAPON_NO_COMMON_ENERGIES
 template <>
 class wnWeaponBuilder<wnPitBowModuleAccesserBuildConfig> : public Weapon {
 protected:
@@ -49,6 +55,7 @@ public:
     virtual ~wnWeaponBuilder() { }
     virtual void deactivateDescendantForce() { wnDeactivateArticleDescendants(m_modules.m_generateArticleBuilder); }
 };
+#endif
 
 class wnPitBow : public wnWeaponBuilder<wnPitBowModuleAccesserBuildConfig> {
 public:
