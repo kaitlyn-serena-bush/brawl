@@ -153,16 +153,20 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
     if (situation.getKind() == 0) {
         Vec2f normal = moduleAccesser->getGroundModule().getTouchNormal(8, 0);
         bool takeOff = true;
-        if (static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) >= stickMin) {
-            Vec2f stick;
-            stick.m_x = stickX;
-            stick.m_y = stickY;
-            if (normal.angle(&stick) >= 1.5707964f) {
+        if (!(static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) < stickMin)) {
+            if (normal.angle(&Vec2f(stickX, stickY)) >= 1.5707964f) {
                 takeOff = false;
             }
         }
         if (!takeOff) {
-            direction = atan2f(normal.m_y, normal.m_x) + 1.5707964f * (lr > 0.0f ? -1.0f : 1.0f);
+            float slope = atan2f(normal.m_y, normal.m_x);
+            float side;
+            if (lr > 0.0f) {
+                side = -1.0f;
+            } else {
+                side = 1.0f;
+            }
+            direction = slope + 1.5707964f * side;
             if (direction >= 3.1415927f) {
                 direction -= 6.2831855f;
             } else if (direction <= -3.1415927f) {
@@ -174,8 +178,7 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
             if (magnitude <= 0.05f) {
                 direction = 0.0f;
             } else {
-                wide = fabs(3.1415927f - magnitude);
-                magnitude = wide;
+                magnitude = fabs(3.1415927f - magnitude);
                 if (magnitude <= 0.05f) {
                     direction = 3.1415927f;
                 }
@@ -543,8 +546,7 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         if (magnitude <= 0.05f) {
             direction = 0.0f;
         } else {
-            wide = fabs(3.1415927f - magnitude);
-            magnitude = wide;
+            magnitude = fabs(3.1415927f - magnitude);
             if (magnitude <= 0.05f) {
                 direction = 3.1415927f;
             }
