@@ -20,6 +20,7 @@
 #include <so/controller/so_controller_module_impl.h>
 #include <so/model/so_model_module_impl.h>
 #include <so/turn/so_turn_module.h>
+#include <so/motion/so_motion_module_impl.h>
 #include <types.h>
 
 class ftLucarioStatusUniqProcessSpecialHi : public soStatusUniqProcess {
@@ -68,6 +69,67 @@ void speed_mul_energy(soKineticModule* kineticModule, int energy, float x, float
 
 extern ftLucarioStatusUniqProcessSpecialHiRush g_ftLucarioStatusUniqProcessSpecialHiRush;
 
+float dotProduct(Vec2f* a, Vec2f* b);
+
+// A flight direction within 0.05 rad of level is made exactly level (0 or pi).
+static inline float snapDirection(float direction) {
+    double wide = fabs(direction);
+    float magnitude = wide;
+    if (magnitude <= 0.05f) {
+        direction = 0.0f;
+    } else {
+        wide = fabs(3.1415927f - magnitude);
+        magnitude = wide;
+        if (magnitude <= 0.05f) {
+            direction = 3.1415927f;
+        }
+    }
+    return direction;
+}
+
+// The status the rush leaves for is kept in work int 0x20000001 while the flag 0x22000014 is set.
+static inline void setNextStatus(soModuleAccesser* moduleAccesser, int status) {
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    work.onFlag(0x22000014);
+    work.setInt(status, 0x20000001);
+}
+
+static inline void clearNextStatus(soModuleAccesser* moduleAccesser) {
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    work.offFlag(0x22000014);
+    work.setInt(-1, 0x20000001);
+}
+
+// BYTES: nw4r::math::FSelect is never expanded at the optimization level of the fighter units (-O2,s), so the two
+// selects of the clamp are written with the instruction itself, as in the Pikachu units.
+static inline float clampRate(register float value, register float low, register float high) {
+    register float difference;
+    register float bounded;
+    register float result;
+    difference = value - low;
+    asm { fsel bounded, difference, value, low }
+    difference = bounded - high;
+    asm { fsel result, difference, high, bounded }
+    return result;
+}
+
+// The rush follows the ground while it touches it and flies free otherwise; its speeds are capped at 10.
+static inline void setRushKinetic(soGroundModule& ground, soKineticModule& kinetic, soModuleAccesser* moduleAccesser) {
+    if (ground.isTouch(8, 0)) {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(1), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    } else {
+        ground.setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(5), 0);
+        kinetic.changeKinetic(0xd, moduleAccesser);
+    }
+    soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
+    stop.m_speedLimit = Vec2f(10.0f, 10.0f);
+    stop.m_speedTarget = Vec2f(10.0f, 10.0f);
+    ftKineticEnergyGravity& gravity = dynamic_cast<ftKineticEnergyGravity&>(*kinetic.getEnergy(1));
+    gravity.unk1C = 10.0f;
+    gravity.m_fallSpeedMax = 10.0f;
+}
+
 // The start of the move: the horizontal speed is divided by the constant 0xfb8, the fall stops.
 void ftLucarioStatusUniqProcessSpecialHi::initStatus(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
@@ -103,8 +165,123 @@ void ftLucarioStatusUniqProcessSpecialHi::execStatus(soModuleAccesser* moduleAcc
     }
 }
 
-void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser*) { }
-void ftLucarioStatusUniqProcessSpecialHiRush::execStatus(soModuleAccesser*) { }
+
+// The rush starts along the stick (straight up without one): on the ground along the surface unless the stick
+// points away from it, in which case Lucario takes off.
+void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* moduleAccesser) {
+    soSituationModule& situation = moduleAccesser->getSituationModule();
+    soKineticModule& kinetic = moduleAccesser->getKineticModule();
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    float stickX = moduleAccesser->getControllerModule().getStickX();
+    float stickY = moduleAccesser->getControllerModule().getStickY();
+    float direction = 1.5707964f;
+    float speed = soValueAccesser::getConstantFloat(moduleAccesser, 0xfbd, 0);
+    float stickMin = soValueAccesser::getConstantFloat(moduleAccesser, 0xfbc, 0);
+    clearNextStatus(moduleAccesser);
+    if (static_cast<float>(fabs(stickX)) > soValueAccesser::getConstantFloat(moduleAccesser, 0xfbb, 0)) {
+        moduleAccesser->getPostureModule().setStickLR(0.0f);
+        moduleAccesser->getPostureModule().updateRotYLr();
+    }
+    float lr = moduleAccesser->getPostureModule().getLr();
+    Vec2f velocity;
+    if (situation.getKind() == 0) {
+        Vec2f normal = moduleAccesser->getGroundModule().getTouchNormal(8, 0);
+        bool takeOff = true;
+        if (static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) >= stickMin) {
+            Vec2f stick;
+            stick.m_x = stickX;
+            stick.m_y = stickY;
+            if (normal.angle(&stick) >= 1.5707964f) {
+                takeOff = false;
+            }
+        }
+        if (!takeOff) {
+            direction = atan2f(normal.m_y, normal.m_x) + 1.5707964f * (lr > 0.0f ? -1.0f : 1.0f);
+            if (direction >= 3.1415927f) {
+                direction -= 6.2831855f;
+            } else if (direction <= -3.1415927f) {
+                direction += 6.2831855f;
+            }
+            direction = snapDirection(direction);
+            Vec2f::copy(velocity, get_vector(direction, speed));
+        } else {
+            situation.setKind(static_cast<SituationKind>(2), false);
+            moduleAccesser->getGroundModule().setCorrect(static_cast<soGroundShapeImpl::CorrectKind>(5), 0);
+        }
+    }
+    kinetic.unableEnergy(1);
+    kinetic.unableEnergy(0);
+    kinetic.unableEnergy(2);
+    kinetic.enableEnergy(3);
+    if (situation.getKind() == 2) {
+        if (static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) >= stickMin) {
+            direction = atan2(stickY, stickX);
+        }
+        Vec2f::copy(velocity, get_vector(direction, speed));
+        ftKineticEnergyGravity& gravity = dynamic_cast<ftKineticEnergyGravity&>(*kinetic.getEnergy(1));
+        gravity.m_gravity = 0.0f;
+        gravity.disable();
+    }
+    setRushKinetic(moduleAccesser->getGroundModule(), kinetic, moduleAccesser);
+    soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*kinetic.getEnergy(3));
+    stop.m_speed = velocity;
+    stop.enable();
+    work.setFloat(velocity.m_x, 0x21000006);
+    work.setFloat(velocity.m_y, 0x21000007);
+    work.setFloat(direction, 0x21000005);
+    set_pose(moduleAccesser);
+}
+
+// The stick steers the flight: its component across the flight direction turns it by up to the constant 0xfbe.
+static inline void steer(soModuleAccesser* moduleAccesser) {
+    soControllerModule& controller = moduleAccesser->getControllerModule();
+    Vec2f stick(controller.getStickX(), controller.getStickY());
+    if (stick.length() > 1.1920929e-7f) {
+        soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+        Vec2f velocity(work.getFloat(0x21000006), work.getFloat(0x21000007));
+        Vec2f side = get_vector(1.5707964f + atan2f(velocity.m_y, velocity.m_x), 1.0f);
+        float amount = dotProduct(&side, &stick);
+        float deadZone = soValueAccesser::getConstantFloat(moduleAccesser, 0xc2d, 0);
+        float magnitude = static_cast<float>(fabs(amount));
+        if (magnitude >= deadZone) {
+            soWorkManageModule& turnWork = moduleAccesser->getWorkManageModule();
+            float rate = (magnitude - deadZone) / (1.0f - deadZone);
+            rate = clampRate(rate, 0.0f, 1.0f);
+            if (amount < 0.0f) {
+                rate *= -1.0f;
+            }
+            float direction = turnWork.getFloat(0x21000005);
+            direction = direction + 0.017453292f * soValueAccesser::getConstantFloat(moduleAccesser, 0xfbe, 0) * rate;
+            turnWork.setFloat(direction, 0x21000005);
+            soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3));
+            Vec2f newSpeed;
+            Vec2f::copy(newSpeed, get_vector(direction, stop.getSpeed().length()));
+            stop.m_speed = newSpeed;
+        }
+    }
+}
+
+// After 0x5dc2 frames the rush slows down (once, by the constant 0xfc0) and brakes with 0xfc1.
+void ftLucarioStatusUniqProcessSpecialHiRush::execStatus(soModuleAccesser* moduleAccesser) {
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    soKineticEnergyNormal& stop = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3));
+    if (work.getInt(0x20000000) > soValueAccesser::getConstantInt(moduleAccesser, 0x5dc2, 0)) {
+        if (!work.isFlag(0x22000013)) {
+            float mul = soValueAccesser::getConstantFloat(moduleAccesser, 0xfc0, 0);
+            speed_mul(mul, mul, moduleAccesser);
+            work.onFlag(0x22000013);
+        }
+        float brake = soValueAccesser::getConstantFloat(moduleAccesser, 0xfc1, 0);
+        stop.m_brake = Vec2f(brake, brake);
+    } else {
+        stop.m_brake = Vec2f(0.0f, 0.0f);
+    }
+    steer(moduleAccesser);
+    float stickX = moduleAccesser->getControllerModule().getStickX();
+    if (static_cast<float>(fabs(stickX)) >= soValueAccesser::getConstantFloat(moduleAccesser, 0xc2d, 0)) {
+        moduleAccesser->getWorkManageModule().setFloat(stickX > 0.0f ? 1.0f : -1.0f, 0x21000008);
+    }
+}
 
 void ftLucarioStatusUniqProcessSpecialHiRush::exitStatus(soModuleAccesser* moduleAccesser, int) {
     if (moduleAccesser->getSituationModule().getKind() == 2) {
@@ -114,7 +291,41 @@ void ftLucarioStatusUniqProcessSpecialHiRush::exitStatus(soModuleAccesser* modul
     }
 }
 
-void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser*) { }
+
+// The rush ends when its motion ends (0x11c), at a ledge (0x73) or against a surface (check_dir).
+void ftLucarioStatusUniqProcessSpecialHiRush::execFixPos(soModuleAccesser* moduleAccesser) {
+    soGroundModule& ground = moduleAccesser->getGroundModule();
+    soKineticModule& kinetic = moduleAccesser->getKineticModule();
+    if (moduleAccesser->getMotionModule().isEnd()) {
+        setNextStatus(moduleAccesser, 0x11c);
+    }
+    setRushKinetic(ground, kinetic, moduleAccesser);
+    if (moduleAccesser->getSituationModule().getKind() == 0 && ground.isTouch(8, 0)) {
+        Vec2f speed = dynamic_cast<soKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(3)).getSpeed();
+        if (speed.length() > 1.1920929e-7f) {
+            Vec2f normal = ground.getTouchNormal(8, 0);
+            normal.normalize();
+            if (dotProduct(&normal, &speed) > 1.1920929e-7f) {
+                moduleAccesser->getSituationModule().setKind(static_cast<SituationKind>(2), false);
+            }
+        }
+    }
+    if (ground.isStCliff(0)) {
+        setNextStatus(moduleAccesser, 0x73);
+    } else if (!check_dir(8, false, 0.0f, moduleAccesser) && !check_dir(2, true, 1.0f, moduleAccesser) &&
+               !check_dir(4, true, -1.0f, moduleAccesser)) {
+        check_dir(1, false, 0.0f, moduleAccesser);
+    }
+    soWorkManageModule& work = moduleAccesser->getWorkManageModule();
+    if (work.isFlag(0x22000014)) {
+        int status = work.getInt(0x20000001);
+        moduleAccesser->getStatusModule().changeStatusRequest(status, moduleAccesser);
+        if (status == 0x11d) {
+            speed_mul(1.0f, 0.0f, moduleAccesser);
+        }
+        clearNextStatus(moduleAccesser);
+    }
+}
 
 void ftLucarioStatusUniqProcessSpecialHiRushEnd::initStatus(soModuleAccesser* moduleAccesser) {
     fn_118_F1E4(moduleAccesser);
@@ -267,13 +478,9 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
         bool headOn = angle >= 0.017453292f * (90.0f + soValueAccesser::getConstantFloat(moduleAccesser, 0xfbf, 0));
         if (headOn) {
             if (attach && check_attach(lr, moduleAccesser)) {
-                soWorkManageModule& work = moduleAccesser->getWorkManageModule();
-                work.onFlag(0x22000014);
-                work.setInt(0x68, 0x20000001);
+                setNextStatus(moduleAccesser, 0x68);
             } else {
-                soWorkManageModule& work = moduleAccesser->getWorkManageModule();
-                work.onFlag(0x22000014);
-                work.setInt(0x11d, 0x20000001);
+                setNextStatus(moduleAccesser, 0x11d);
             }
             return true;
         }
@@ -326,17 +533,7 @@ void ftLucarioStatusUniqProcessSpecialHiRush::turn(soModuleAccesser* moduleAcces
         float y = sin(direction);
         float x = cos(direction);
         direction = atan2(y, -x);
-        double wide = fabs(direction);
-        float magnitude = wide;
-        if (magnitude <= 0.05f) {
-            direction = 0.0f;
-        } else {
-            wide = fabs(3.1415927f - magnitude);
-            magnitude = wide;
-            if (magnitude <= 0.05f) {
-                direction = 3.1415927f;
-            }
-        }
+        direction = snapDirection(direction);
         work.setFloat(direction, 0x21000005);
         Vec2f speed;
         Vec2f::copy(speed, get_vector(direction, soValueAccesser::getConstantFloat(moduleAccesser, 0xfbd, 0)));
