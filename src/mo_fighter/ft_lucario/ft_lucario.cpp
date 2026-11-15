@@ -120,44 +120,26 @@ struct ftLucarioArticleKind : wnArticleKindInfo {
         kind = 0;
         subKind = Fighter_Lucario;
     }
+    s32 getSubKind() const { return subKind; } // HYPOTHESIS: accessor spelling (the lookup reads the kind through a call, as in ft_ganon.cpp)
 };
 
-// HYPOTHESIS: the descriptor keeps the address of its by-value kind argument (the copy lives in the frame of the caller).
+// The descriptor keeps the address of the kind temporary of the caller.
 struct ftLucarioArticleBuildInfo : wnArticleBuildInfo {
-    ftLucarioArticleBuildInfo(wnArticleKindInfo kindArg, soHeapModule* heap) {
+    ftLucarioArticleBuildInfo(const wnArticleKindInfo& kindArg, soHeapModule* heap) {
         kindInfo = &kindArg;
         heapModule = heap;
     }
 };
 
-// The data blocks of the articles come from the common data accessor of sora_melee (only declared here).
-extern "C" void* fn_27_1494D0(const ftCommonDataAccesser* accesser, s32 subKind, bool* resourceGroup);
-
-template <class W> struct ftLucarioArticleTraits;
-#define FT_LUCARIO_TRAITS(W, DATA, ID, GETTER) \
-    template <> struct ftLucarioArticleTraits<W> { \
-        enum { ArticleId = ID }; \
-        static const DATA* getData() { \
-            ftLucarioArticleDataTag tag; \
-            return static_cast<const DATA*>(GETTER(&g_ftCommonDataAccesser, Fighter_Lucario, &tag.m_resourceGroup)); \
-        } \
-    };
-#define FT_LUCARIO_TRAITS_MEMBER(W, DATA, ID, GETTER) \
-    template <> struct ftLucarioArticleTraits<W> { \
-        enum { ArticleId = ID }; \
-        static const DATA* getData() { \
-            ftLucarioArticleDataTag tag; \
-            return static_cast<const DATA*>(g_ftCommonDataAccesser.GETTER(Fighter_Lucario, &tag.m_resourceGroup)); \
-        } \
-    };
-
-FT_LUCARIO_TRAITS(wnLucarioAuraBall, wnLucarioAuraBallData, 0, fn_27_1494D0)
-FT_LUCARIO_TRAITS_MEMBER(wnLucarioQigong, wnLucarioQigongData, 1, getWeaponData<wnLucarioQigongData>)
-
-// Every article of the fighter is built by this constructor from the data of the fighter kind.
-template <class W>
-wnArticleHolder<W>::wnArticleHolder(soModuleAccesser* acc) : soInstancePoolRoot(acc),
-    m_instance(ftLucarioArticleTraits<W>::ArticleId, ftLucarioArticleBuildInfo(ftLucarioArticleKind(), static_cast<soHeapModule*>(acc->m_enumerationStart->m_heapModule)), ftLucarioArticleTraits<W>::getData()) { }
+// The articles are built from the data of the fighter kind.
+template <>
+inline wnArticleHolder<wnLucarioAuraBall>::wnArticleHolder(soModuleAccesser* acc) : soInstancePoolRoot(acc),
+    m_instance(0, ftLucarioArticleBuildInfo(ftLucarioArticleKind(), static_cast<soHeapModule*>(acc->m_enumerationStart->m_heapModule)),
+               g_ftCommonDataAccesser.getWeaponData<wnLucarioAuraBallData>(ftLucarioArticleKind().getSubKind(), &ftLucarioArticleDataTag().m_resourceGroup)) { }
+template <>
+inline wnArticleHolder<wnLucarioQigong>::wnArticleHolder(soModuleAccesser* acc) : soInstancePoolRoot(acc),
+    m_instance(1, ftLucarioArticleBuildInfo(ftLucarioArticleKind(), static_cast<soHeapModule*>(acc->m_enumerationStart->m_heapModule)),
+               g_ftCommonDataAccesser.getWeaponData<wnLucarioQigongData>(ftLucarioArticleKind().getSubKind(), &ftLucarioArticleDataTag().m_resourceGroup)) { }
 
 // ---- the articles and their mediator --------------------------------------------------------------------------------
 
