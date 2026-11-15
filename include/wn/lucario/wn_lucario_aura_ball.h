@@ -83,7 +83,23 @@ public:
         soTransitionModuleBuildConfig<wnStatusTransitionTypeList> > StatusModuleBuildConfig;
     typedef wnAnimCmdModuleSubBuildConfigDefault<1, 3, 0, 0, 1, 10, 0, 0, 1, 10, 0, 0, 1, 10, 0, 0>
         AnimCmdModuleSubBuildConfig;
+#ifdef WN_ZELDA_LIGHTING_BOW_UNIT
+    typedef soGenerateArticleManageModuleBuilder<soGenerateArticleManageModuleBuildConfigNull> GenerateArticleManageModuleBuilder;
+#endif
 };
+
+#ifdef WN_ZELDA_LIGHTING_BOW_UNIT
+template <>
+class soModuleAccesserBuilder<wnLucarioAuraBallModuleAccesserBuildConfig> : public utUnCopyable {
+public:
+    typedef wnLucarioAuraBallModuleAccesserBuildConfig BC;
+    WN_ZELDA_LIGHTING_BOW_BUILDER_MEMBERS
+
+    soModuleAccesserBuilder(StageObject* owner, const wnModuleAccesserBuildData& bd);
+    ~soModuleAccesserBuilder();
+    soModuleAccesser* getModuleAccesser();
+};
+#endif
 
 class wnLucarioAuraBall : public wnWeaponBuilder<wnLucarioAuraBallModuleAccesserBuildConfig> {
     const wnLucarioAuraBallParam* m_param;          // +0x1FDC
