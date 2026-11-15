@@ -125,6 +125,7 @@ public:
     static float getChargeRate(soModuleAccesser* moduleAccesser);
     // HYPOTHESIS: arguments are the fighter's facing, a work float and the fighter's scale.
     void shoot(float lr, float unk, float scale);
+    void shootImpl(float lr, float unk, float scale);
     int getChargeLevel();
     int getChargeFrame();
     static void setEffectScale(soModuleAccesser* moduleAccesser);

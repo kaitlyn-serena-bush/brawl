@@ -321,6 +321,10 @@ public:
 #ifdef MT_VEC3F_ADD_RHS_RESULT_XY_FIRST
         // MATCH-ONLY: retain the native independent XY/Z input lifetimes.
         register f32 fr2, fr3, fr1, fr0;
+#elif defined(MT_VEC3F_ADD_OPERAND_ORDER_REGS)
+        // BYTES: register variables declared in operand order (left XY, left Z, right XY, right Z); the Lucario aura
+        // ball unit colours the sum of its two hand positions this way.
+        register f32 fr0, fr1, fr2, fr3;
 #else
         register f32 fr3, fr2, fr1, fr0;
 #endif
@@ -361,6 +365,10 @@ public:
 #elif defined(MT_VEC3F_SUB_ASCENDING)
         // MATCH-ONLY: Finale's sweep uses the existing four-register subtract
         // with ascending register allocation; arithmetic and default are unchanged.
+        register f32 fr0, fr1, fr2, fr3;
+#elif defined(MT_VEC3F_ADD_OPERAND_ORDER_REGS)
+        // BYTES: register variables declared in operand order (left XY, left Z, right XY, right Z); the Lucario aura
+        // ball unit colours the sum of its two hand positions this way.
         register f32 fr0, fr1, fr2, fr3;
 #else
         register f32 fr3, fr2, fr1, fr0;

@@ -14,6 +14,7 @@
 #define FT_REL_LINK_EXTERN
 #define SO_NULLABLE_INLINE_CTOR
 #define MT_VEC3F_MUL_INLINE
+#define MT_VEC3F_ADD_OPERAND_ORDER_REGS // BYTES: register order of the paired-single vector sum (mt_vector.h)
 #include <wn/wn_module_accesser_builder.h>
 #include <wn/zelda/wn_zelda_lighting_bow.h>
 #include <wn/lucario/wn_lucario_aura_ball.h>
@@ -29,6 +30,14 @@
 #include <ft/ft_common_data_accesser.h>
 #include <nw4r/math/math_arithmetic.h>
 #include <memory.h>
+#include <gf/gf_task_scheduler.h>
+#include <so/so_external_value_accesser.h>
+#include <math.h>
+
+// BYTES: the empty base destructors that sora_melee always expands (they have no out-of-line copy there).
+inline soTeam::~soTeam() { }
+inline soSound3dGeneratorAccesserImpl::~soSound3dGeneratorAccesserImpl() { }
+inline soResourceIdAccesser::~soResourceIdAccesser() { }
 
 // Registers the Lucario aura ball article class (kind 99) in the class info table during static initialization.
 wnClassInfoImpl<99, wnLucarioAuraBall, wnLucarioAuraBallData> g_wnLucarioAuraBallClassInfo;
@@ -61,11 +70,12 @@ wnLucarioAuraBall::wnLucarioAuraBall(s32 articleId, const wnArticleBuildInfo& in
             info.getHeapModule()->getNWModelInstanceHeap(), info.getHeapModule()->getNWMotionInstanceHeap(),
             static_cast<u8>(data->m_resGroupNo), -1, &m_paramAccesser, 0, 0, 0, 0, 0, 0, 0)),
     m_param(data->m_param), m_paramAccesser(data->m_param) {
+    soModuleAccesser* acc = m_moduleAccesser;
     soStatusUniqProcess* uniqProcs[3];
     uniqProcs[0] = &lbl_27_bss_89E4;
     uniqProcs[1] = &lbl_27_bss_89F4;
     uniqProcs[2] = &lbl_27_bss_8A04;
-    m_moduleAccesser->getStatusModule().addRangeUniqProc(uniqProcs, 3);
+    acc->getStatusModule().addRangeUniqProc(uniqProcs, 3);
     Weapon::deactivate(false);
 }
 
@@ -122,6 +132,84 @@ void wnLucarioAuraBall::onDeactivate() {
     removeChargeEffect(m_moduleAccesser);
 }
 
+// The ball sits between Lucario's hands (or at the copying Kirby's hand node) while it is held.
+static inline void holdAtHand(soModuleAccesser* acc, Vec3f* out) {
+    soLinkModule& link = acc->getLinkModule();
+    Vec3f pos;
+    switch (acc->getWorkManageModule().getInt(0x10000009)) {
+    case 0x21:
+    default: {
+        Vec3f first = link.getParentModelNodeGlobalPosition(3, 0x1f, false);
+        Vec3f second = link.getParentModelNodeGlobalPosition(3, 0x35, false);
+        pos = (first + second) * 0.5f;
+        break;
+    }
+    case 5:
+        pos = link.getParentModelNodeGlobalPosition(3, 0x1cb, false);
+        break;
+    }
+    acc->getPostureModule().setPos(&pos);
+    *out = pos;
+}
+
+void wnLucarioAuraBall::notifyEventCollisionAttack(float power, soCollisionLog* collisionLog, soModuleAccesser* moduleAccesser) {
+    gfTask* task = gfTaskScheduler::getInstance()->getTaskById(static_cast<gfTask::Category>(collisionLog->m_taskCategory),
+                                                                collisionLog->m_taskId);
+    switch (collisionLog->m_kind) {
+    case 2:
+        unkA4Bit7 = 0;
+        if (m_moduleAccesser->getSituationModule().getKind() == 2) {
+            soCollisionAttackData* data =
+                m_moduleAccesser->getCollisionAttackModule().getData(collisionLog->m_damageIndex, false);
+            if ((*reinterpret_cast<u32*>(reinterpret_cast<char*>(data) + 0x3C) >> 31) == 0) {
+                soCollisionShieldModule& shield =
+                    *soExternalValueAccesser::getCollisionShieldModule(dynamic_cast<StageObject*>(task));
+                if (shield.isHop(collisionLog->_35) == true) {
+                    float hopCos;
+                    float hopAngle = shield.getHopAngle(collisionLog->_35) * 0.017453292f;
+                    hopCos = cos(hopAngle);
+                    m_reflectDirX = hopCos * shield.getLR(0);
+                    m_reflectDirY = sin(hopAngle);
+                    unkA4Bit7 = 1;
+                } else if (shield.isNoHop(collisionLog->_35) == false) {
+                    Vec3f center = shield.getCenterPos(collisionLog->m_collsionIndex, collisionLog->_35);
+                    Vec3f logPos;
+                    logPos = collisionLog->m_pos;
+                    Vec2f dir;
+                    dir.m_x = logPos.m_x - center.m_x;
+                    dir.m_y = logPos.m_y - center.m_y;
+                    float length = dir.length();
+                    if (length > 0.00001f) {
+                        dir.m_x *= 1.0f / length;
+                        dir.m_y *= 1.0f / length;
+                        wnKineticEnergyNormal& energy =
+                            dynamic_cast<wnKineticEnergyNormal&>(*moduleAccesser->getKineticModule().getEnergy(0));
+                        Vec2f speed = energy.getSpeed();
+                        if (dir.angle(&speed) * 57.29578f < 135.0f) {
+                            m_reflectDirX = dir.m_x;
+                            m_reflectDirY = dir.m_y;
+                            unkA4Bit7 = 1;
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    case 1:
+        break;
+    case 0:
+        if (task != NULL) {
+            float reboundX = 0.0f;
+            float reboundY = 0.0f;
+            if (moduleAccesser->getCollisionAttackModule().checkRebound(moduleAccesser, &dynamic_cast<StageObject&>(*task),
+                                                                        collisionLog, power, &reboundX, &reboundY)) {
+                return;
+            }
+        }
+        break;
+    }
+}
+
 bool wnLucarioAuraBall::notifyEventCollisionAttackCheck(u32 flags) {
     int status = m_moduleAccesser->getStatusModule().getStatusKind();
     switch (status) {
@@ -130,6 +218,46 @@ bool wnLucarioAuraBall::notifyEventCollisionAttackCheck(u32 flags) {
         return false;
     }
     return Weapon::notifyEventCollisionAttackCheck(flags);
+}
+
+inline void wnLucarioAuraBall::shootImpl(float lr, float unk, float scale) {
+    soModuleAccesser* acc = m_moduleAccesser;
+    soWorkManageModule& work = acc->getWorkManageModule();
+    Vec3f pos;
+    holdAtHand(acc, &pos);
+    Vec2f velocity;
+    acc->getWorkManageModule().setFloat(pos.m_x, 0x11000001);
+    acc->getWorkManageModule().setFloat(pos.m_y, 0x11000002);
+    pos.m_z = acc->getGroundModule().getZ();
+    soPostureModule& posture = acc->getPostureModule();
+    posture.init(&pos, posture.getLr());
+    Vec2f center = acc->getLinkModule().getParentShapeCenterPos(3);
+    acc->getGroundModule().setShapeSafePos(&center, 0);
+    Vec3f rot(0.0f, 0.0f, 0.0f);
+    acc->getPostureModule().setRot(&rot, 0);
+    acc->m_stageObject->updateNodeSRT();
+    acc->getPostureModule().setLr(lr);
+    acc->getStatusModule().changeStatusRequest(2, acc);
+    wnKineticEnergyNormal& energy = dynamic_cast<wnKineticEnergyNormal&>(*acc->getKineticModule().getEnergy(0));
+    float angle = soValueAccesser::getConstantFloat(acc, 0xfa0, 0);
+    float speedMin = soValueAccesser::getConstantFloat(acc, 0xfa1, 0);
+    float speedMax = soValueAccesser::getConstantFloat(acc, 0xfa2, 0);
+    float speed = speedMin + getChargeRate(acc) * (speedMax - speedMin);
+    float vx = lr * (speed * static_cast<float>(cos(angle)));
+    float vy = speed * static_cast<float>(sin(angle));
+    velocity.m_x = vx;
+    velocity.m_y = vy;
+    energy.m_speed = velocity;
+    energy.disable();
+    work.setFloat(scale, 0x1100000A);
+    setEffectScale(acc);
+    updateNodeSRT();
+    work.offFlag(0x12000000);
+    work.setFloat(unk, 0x11000009);
+}
+
+void wnLucarioAuraBall::shoot(float lr, float unk, float scale) {
+    shootImpl(lr, unk, scale);
 }
 
 float wnLucarioAuraBall::getChargeRate(soModuleAccesser* moduleAccesser) {
@@ -172,25 +300,9 @@ void wnLucarioAuraBall::updateNodeSRT() {
     Vec3f position(0.0f, 0.0f, 0.0f);
     switch (acc->getStatusModule().getStatusKind()) {
     case 0:
-    case 1: {
-        soLinkModule& link = acc->getLinkModule();
-        Vec3f pos;
-        switch (acc->getWorkManageModule().getInt(0x10000009)) {
-        case 0x21:
-        default: {
-            Vec3f first = link.getParentModelNodeGlobalPosition(3, 0x1f, false);
-            Vec3f second = link.getParentModelNodeGlobalPosition(3, 0x35, false);
-            pos = (first + second) * 0.5f;
-            break;
-        }
-        case 5:
-            pos = link.getParentModelNodeGlobalPosition(3, 0x1cb, false);
-            break;
-        }
-        acc->getPostureModule().setPos(&pos);
-        position = pos;
+    case 1:
+        holdAtHand(acc, &position);
         break;
-    }
     case 2:
         setEffectScale(acc);
         position = acc->getPostureModule().getPos();

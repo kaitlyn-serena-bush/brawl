@@ -14,9 +14,9 @@ struct wnActivateDesc; // HYPOTHESIS: original descriptor type spelling.
 
 class Weapon : public StageObject, public soStatusEventObserver, public soCollisionAttackEventObserver, public soCollisionHitEventObserver, public soArticle {
 
+protected: // the Lucario aura ball writes the reflect direction in its own collision handler
     float m_reflectDirX; // +0x9C: direction in which a hop reflects the speed (valid while unkA4Bit7)
     float m_reflectDirY; // +0xA0
-protected:
     // Native article collision and sync accessors load/store this byte at A4.
     // Bit 6 is the owner status sync flag; the other bit meanings are unresolved.
     union {
