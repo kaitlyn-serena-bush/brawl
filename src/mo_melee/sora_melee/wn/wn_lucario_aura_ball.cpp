@@ -118,7 +118,7 @@ void wnLucarioAuraBall::activate(int founderTaskId, int team, float lr, int char
     updateNodeSRT();
 }
 
-// MATCH-ONLY: the charge-record lookup and the effect removal are written as helpers over the module accesser.
+// The charge-record lookup and the effect removal are helpers over the module accesser.
 static inline const ftLucarioAuraBallParam* getAuraBallParam(soModuleAccesser* acc) {
     return g_ftCommonDataAccesser.getLucarioAuraBallParam(acc->getWorkManageModule().getInt(0x10000009));
 }
@@ -165,7 +165,7 @@ void wnLucarioAuraBall::notifyEventCollisionAttack(float power, const soCollisio
         if (m_moduleAccesser->getSituationModule().getKind() == 2) {
             soCollisionAttackData* data =
                 m_moduleAccesser->getCollisionAttackModule().getData(collisionLog->m_damageIndex, false);
-            if ((*reinterpret_cast<u32*>(reinterpret_cast<char*>(data) + 0x3C) >> 31) == 0) {
+            if (data->m_shapeType == soCollision::Shape_Sphere) {
                 soCollisionShieldModule& shield =
                     *soExternalValueAccesser::getCollisionShieldModule(dynamic_cast<StageObject*>(task));
                 if (shield.isHop(collisionLog->_35) == true) {
