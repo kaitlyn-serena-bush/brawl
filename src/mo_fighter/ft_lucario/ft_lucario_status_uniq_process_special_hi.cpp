@@ -153,7 +153,9 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
     if (situation.getKind() == 0) {
         Vec2f normal = moduleAccesser->getGroundModule().getTouchNormal(8, 0);
         bool takeOff = true;
-        if (!(static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) < stickMin)) {
+        float absY = fabs(stickY);
+        float absX = fabs(stickX);
+        if (!(absX + absY < stickMin)) {
             if (normal.angle(&Vec2f(stickX, stickY)) >= 1.5707964f) {
                 takeOff = false;
             }
@@ -194,7 +196,9 @@ void ftLucarioStatusUniqProcessSpecialHiRush::initStatus(soModuleAccesser* modul
     kinetic.unableEnergy(2);
     kinetic.enableEnergy(3);
     if (situation.getKind() == 2) {
-        if (static_cast<float>(fabs(stickX)) + static_cast<float>(fabs(stickY)) >= stickMin) {
+        float absY = fabs(stickY);
+        float absX = fabs(stickX);
+        if (absX + absY >= stickMin) {
             direction = atan2(stickY, stickX);
         }
         Vec2f::copy(velocity, get_vector(direction, speed));
@@ -472,16 +476,30 @@ bool check_attach(float lr, soModuleAccesser* moduleAccesser) {
     return false;
 }
 
+// The flight meets the touched surface head-on when it comes in steeper than the constant 0xfbf (degrees past 90
+// from the surface normal).
+static inline bool isHeadOn(int touchMask, soModuleAccesser* moduleAccesser) {
+    Vec2f normal = moduleAccesser->getGroundModule().getTouchNormal(touchMask, 0);
+    Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
+    float angle = normal.angle(&speed);
+    return angle >= 0.017453292f * (90.0f + soValueAccesser::getConstantFloat(moduleAccesser, 0xfbf, 0));
+}
+
+// The angle from one direction to another in 16-bit units (0x8000 is pi).
+static inline int getAngleDifference(const Vec2f& from, Vec2f to) {
+    int fromAngle = static_cast<int>(32768.0f * (static_cast<float>(atan2(from.m_y, from.m_x)) / 3.1415927f));
+    int toAngle = static_cast<int>(32768.0f * (static_cast<float>(atan2(to.m_y, to.m_x)) / 3.1415927f));
+    int difference = fromAngle - toAngle;
+    difference = (difference << 16) >> 16; // wrapped to 16 bits
+    return difference;
+}
+
 // A surface met head-on ends the rush (in a wall cling when allowed, else in the bound status 0x11d); a surface met
 // at a shallow angle bends the flight along it by at most the constant 0xfbe.
 bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAccesser) {
     soGroundModule& ground = moduleAccesser->getGroundModule();
     if (ground.isTouch(touchMask, 0)) {
-        Vec2f normal = moduleAccesser->getGroundModule().getTouchNormal(touchMask, 0);
-        Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
-        float angle = normal.angle(&speed);
-        bool headOn = angle >= 0.017453292f * (90.0f + soValueAccesser::getConstantFloat(moduleAccesser, 0xfbf, 0));
-        if (headOn) {
+        if (isHeadOn(touchMask, moduleAccesser)) {
             if (attach && check_attach(lr, moduleAccesser)) {
                 setNextStatus(moduleAccesser, 0x68);
             } else {
@@ -496,14 +514,9 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
             if (dotProduct(&velocity, &wall) < 0.0f) {
                 soWorkManageModule& work = moduleAccesser->getWorkManageModule();
                 float turnMax = soValueAccesser::getConstantFloat(moduleAccesser, 0xfbe, 0);
-                Vec2f wallDirection = wall;
-                s16 velocityAngle = static_cast<s16>(32768.0f * (static_cast<float>(atan2(velocity.m_y, velocity.m_x)) / 3.1415927f));
-                s16 wallAngle = static_cast<s16>(32768.0f * (static_cast<float>(atan2(wallDirection.m_y, wallDirection.m_x)) / 3.1415927f));
-                s16 difference = velocityAngle - wallAngle;
-                int quarter;
-                if (difference < 0) {
-                    quarter = difference + 0x4000;
-                } else {
+                int difference = getAngleDifference(velocity, wall);
+                int quarter = difference + 0x4000;
+                if (difference >= 0) {
                     quarter = difference - 0x4000;
                 }
                 float delta = 3.1415927f * (static_cast<float>(quarter) / 32768.0f);
@@ -515,7 +528,8 @@ bool check_dir(int touchMask, bool attach, float lr, soModuleAccesser* moduleAcc
                 } else {
                     delta = -delta;
                 }
-                float direction = work.getFloat(0x21000005) + delta;
+                float current = work.getFloat(0x21000005);
+                float direction = current + delta;
                 work.setFloat(direction, 0x21000005);
                 Vec2f newSpeed;
                 Vec2f::copy(newSpeed, get_vector(direction, velocity.length()));
