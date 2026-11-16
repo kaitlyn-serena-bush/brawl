@@ -28,14 +28,14 @@ static inline void setControllerVec(Vec2f& dst, const Vec2f& src) {
     dst = src;
 }
 
-extern "C" void fn_102_C1DC(soModuleAccesser* moduleAccesser) {
+static void ftKineticEnergyUnable(soModuleAccesser* moduleAccesser) {
     moduleAccesser->getKineticModule().getEnergy(0)->disable();
     moduleAccesser->getKineticModule().getEnergy(1)->disable();
     moduleAccesser->getKineticModule().getEnergy(2)->disable();
     moduleAccesser->getKineticModule().getEnergy(3)->disable();
 }
 
-extern "C" void fn_102_C2A4(soModuleAccesser* moduleAccesser) {
+static void initStatusCommon(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     int situation = moduleAccesser->getSituationModule().getKind();
     work.clearAll(2);
@@ -51,7 +51,7 @@ extern "C" void fn_102_C2A4(soModuleAccesser* moduleAccesser) {
         ftKoopaSpecialHiParam* param = getKoopaSpecialHiParam(Fighter_Koopa, 1);
         Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
         speed.m_y = param->m_airSpeedY;
-        fn_102_C1DC(moduleAccesser);
+        ftKineticEnergyUnable(moduleAccesser);
         ftKineticEnergyGravity& gravity = dynamic_cast<ftKineticEnergyGravity&>(*moduleAccesser->getKineticModule().getEnergy(1));
         gravity.resetEnergy(0, &Vec2f(0.0f, speed.m_y), &Vec3f(0.0f, 0.0f, 0.0f), moduleAccesser);
         gravity.m_gravity = -param->m_gravity;
@@ -85,7 +85,7 @@ public:
 void ftKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     if (work.isFlag(0x1200003d)) {
-        fn_102_C2A4(moduleAccesser);
+        initStatusCommon(moduleAccesser);
         work.offFlag(0x1200003d);
     }
     soItemManageModule& items = moduleAccesser->getItemManageModule();
@@ -95,7 +95,7 @@ void ftKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAcce
     Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
     ftKoopaSpecialHiParam* param = getKoopaSpecialHiParam(Fighter_Koopa, 1);
     work.setInt(0, 0x20000000);
-    fn_102_C1DC(moduleAccesser);
+    ftKineticEnergyUnable(moduleAccesser);
     if (!work.isFlag(0x22000010)) {
         ftKineticEnergyController& controller = dynamic_cast<ftKineticEnergyController&>(*moduleAccesser->getKineticModule().getEnergy(2));
         controller.resetEnergy(0, &Vec2f(speed.m_x, 0.0f), &Vec3f(0.0f, 0.0f, 0.0f), moduleAccesser);
@@ -143,7 +143,7 @@ void ftKoopaStatusUniqProcessSpecialHiG::execStatus(soModuleAccesser* moduleAcce
     if (work.isFlag(0x22000010) && !work.isFlag(0x22000011)) {
         Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
         moduleAccesser->getKineticModule().clearSpeedAll();
-        fn_102_C1DC(moduleAccesser);
+        ftKineticEnergyUnable(moduleAccesser);
         ftKineticEnergyStop& stop = dynamic_cast<ftKineticEnergyStop&>(*moduleAccesser->getKineticModule().getEnergy(3));
         stop.resetEnergy(0, &Vec2f(speed.m_x, 0.0f), &Vec3f(0.0f, 0.0f, 0.0f), moduleAccesser);
         stop.enable();
@@ -172,7 +172,7 @@ void ftKoopaStatusUniqProcessSpecialHiG::execStatus(soModuleAccesser* moduleAcce
 void ftKoopaStatusUniqProcessSpecialHiA::initStatus(soModuleAccesser* moduleAccesser) {
     soWorkManageModule& work = moduleAccesser->getWorkManageModule();
     if (work.isFlag(0x1200003d)) {
-        fn_102_C2A4(moduleAccesser);
+        initStatusCommon(moduleAccesser);
         work.offFlag(0x1200003d);
     }
     soItemManageModule& items = moduleAccesser->getItemManageModule();
@@ -183,7 +183,7 @@ void ftKoopaStatusUniqProcessSpecialHiA::initStatus(soModuleAccesser* moduleAcce
     if (!work.isFlag(0x22000010)) {
         ftKoopaSpecialHiParam* param = getKoopaSpecialHiParam(Fighter_Koopa, 1);
         Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
-        fn_102_C1DC(moduleAccesser);
+        ftKineticEnergyUnable(moduleAccesser);
         ftKineticEnergyGravity& gravity = dynamic_cast<ftKineticEnergyGravity&>(*moduleAccesser->getKineticModule().getEnergy(1));
         gravity.resetEnergy(0, &Vec2f(0.0f, speed.m_y), &Vec3f(0.0f, 0.0f, 0.0f), moduleAccesser);
         gravity.m_gravity = -param->m_gravity;
