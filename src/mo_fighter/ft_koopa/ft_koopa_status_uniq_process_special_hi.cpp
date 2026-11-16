@@ -152,10 +152,10 @@ void ftKoopaStatusUniqProcessSpecialHiG::execStatus(soModuleAccesser* moduleAcce
     work.incInt(0x20000000);
     soSlopeModule& slope = *static_cast<soSlopeModule*>(moduleAccesser->m_enumerationStart->m_slopeModule);
     if (work.isFlag(0x22000014)) {
-        if (slope.getStatus().m_mask != soSlopeStatusParam::STATUS_MASK_TOP) {
+        if (slope.getStatus() != soSlopeStatusParam::STATUS_MASK_TOP) {
             slope.setStatus(soSlopeStatusParam::STATUS_MASK_TOP, 6, true);
         }
-    } else if (slope.getStatus().m_mask != soSlopeStatusParam::STATUS_MASK_LR) {
+    } else if (slope.getStatus() != soSlopeStatusParam::STATUS_MASK_LR) {
         slope.setStatus(soSlopeStatusParam::STATUS_MASK_LR, 3, false);
     }
     if (work.isFlag(0x22000013)) {
