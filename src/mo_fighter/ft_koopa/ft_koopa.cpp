@@ -9,6 +9,7 @@
 #define FT_TEAM_TYPED_INTERFACE
 #define WN_KINETIC_MEDIATOR_INLINE_DTOR
 #define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
+#include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
 // The 291-entry process vector is a whole class of sora_melee (the anim cmd one is declared in the list header).
 FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 291);
@@ -16,6 +17,10 @@ FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 291);
 #include <ft/koopa/ft_koopa.h>
 #include <ft/koopa/ft_koopa_extend_param_accesser.h>
 #include <ft/koopa/ft_koopa_transactor.h>
+#include <ft/ft_manager.h>
+#include <ft/ft_owner.h>
+#include <ft/koopa/ft_koopa_special_s.h>
+#include <ft/ft_change_succeed_work.h>
 #include <so/article/so_article_mediator.h>
 #include <so/so_value_accesser.h>
 
@@ -56,6 +61,78 @@ void ftKoopa::processUpdate() {
         second = CLAMP<float>(second, secondMinimum, secondMaximum);
         m_moduleAccesser->getWorkManageModule().setFloat(second, 0x11000013);
     }
+}
+
+bool ftKoopa::notifyEventAnimCmd(acAnimCmd* acmd, soModuleAccesser* moduleAccesser, s32 unk3) {
+    s8 group = acmd->getGroup();
+    if (!isObserv(group)) {
+        return false;
+    }
+    switch (acmd->getType()) {
+    case 5:
+        // HYPOTHESIS: command 5 switches back to Bowser (the end of the transformation).
+        if (static_cast<u8>(g_ftManager->getFighterCount(m_entryId)) > 1) {
+            int fighterNo = g_ftManager->getFighterNo(m_entryId, m_taskId);
+            u8 other = (u8)fighterNo == 0 ? 1 : 0;
+            g_ftManager->toChange(m_entryId, other, 1, 0);
+        }
+        return true;
+    }
+    return Fighter::notifyEventAnimCmd(acmd, moduleAccesser, unk3);
+}
+
+// HYPOTHESIS: the events of the Flying Slam: 8 with the catch request 0xee grabs the victim during the start statuses
+// (0x11c/0x11d), 0xe releases it from the slam statuses (0x11e-0x121).
+struct ftKoopaLinkEventView {
+    int kind;
+    bool done;
+    int value;
+    int request;
+};
+
+void ftKoopa::notifyEventLink(soLinkEventArgs* eventInfo, soModuleAccesser* moduleAccesser, StageObject* stageObj, int unk4) {
+    ftKoopaLinkEventView* event = reinterpret_cast<ftKoopaLinkEventView*>(eventInfo);
+    switch (event->kind) {
+    case 8:
+        if (event->request == 0xee) {
+            switch (m_moduleAccesser->getStatusModule().getStatusKind()) {
+            case 0x11c:
+            case 0x11d:
+                event->value = m_moduleAccesser->getModelModule().getCorrectNodeId(0x12c);
+                event->done = true;
+                m_moduleAccesser->getStatusModule().changeStatusRequest(0x11e, m_moduleAccesser);
+                m_moduleAccesser->getWorkManageModule().setInt(m_moduleAccesser->getLinkModule().getNodeTaskId(0), 0x20000002);
+                m_moduleAccesser->getWorkManageModule().onFlag(0x22000011);
+                return;
+            }
+        }
+        break;
+    case 0xe:
+        switch (m_moduleAccesser->getStatusModule().getStatusKind()) {
+        case 0x11e:
+        case 0x11f:
+        case 0x120:
+        case 0x121:
+            if (m_moduleAccesser->getWorkManageModule().isFlag(0x22000011)) {
+                getCatchView(m_moduleAccesser).unk38(0);
+                m_moduleAccesser->getWorkManageModule().offFlag(0x22000011);
+                m_moduleAccesser->getWorkManageModule().offFlag(0x12000001);
+                if (m_moduleAccesser->getStatusModule().getStatusKind() != 0x121 ||
+                    m_moduleAccesser->getWorkManageModule().isFlag(0x22000010)) {
+                    if (m_moduleAccesser->getWorkManageModule().isFlag(0x1200003e)) {
+                        m_moduleAccesser->getWorkManageModule().offFlag(0x1200003e);
+                    } else if (m_moduleAccesser->getSituationModule().getKind() == 0) {
+                        m_moduleAccesser->getStatusModule().changeStatusRequest(0, m_moduleAccesser);
+                    } else {
+                        m_moduleAccesser->getStatusModule().changeStatusRequest(0xe, m_moduleAccesser);
+                    }
+                }
+            }
+            return;
+        }
+        break;
+    }
+    Fighter::notifyEventLink(eventInfo, moduleAccesser, stageObj, unk4);
 }
 
 // Status teardown destroys its owned change-request queue before observers.
@@ -134,6 +211,40 @@ bool ftKoopa::activeArticle(wnKoopaBreath* weapon, soModuleAccesser* acc) {
     return instance.activeArticle(weapon, acc);
 }
 #pragma pool_data reset
+
+// The kinetic settings of the dummy fighter that takes over the move: Giga Bowser hands over fixed limits.
+void ftKoopa::setupChangeSucceedWork(void* work) {
+    Fighter::setupChangeSucceedWork(work);
+    soModuleAccesser* acc = m_moduleAccesser;
+    wnDummyFighterKineticSettingData hurt;
+    hurt.point[0][0] = 0.0f;
+    hurt.point[1][0] = soValueAccesser::getConstantFloat(acc, 0xbd6, 0);
+    hurt.point[2][0] = 0.0f;
+    hurt.point[3][0] = soValueAccesser::getConstantFloat(acc, 0xbd8, 0);
+    hurt.point[0][1] = 0.0f;
+    hurt.point[1][1] = soValueAccesser::getConstantFloat(acc, 0xbd1, 0);
+    hurt.point[2][1] = 0.0f;
+    hurt.point[3][1] = 0.0f;
+    wnDummyFighterKineticSettingData hit;
+    hit.point[0][0] = 0.0f;
+    hit.point[1][0] = soValueAccesser::getConstantFloat(acc, 0xbbc, 0);
+    hit.point[2][0] = 0.0f;
+    hit.point[3][0] = -1.0f;
+    hit.point[0][1] = 0.0f;
+    hit.point[1][1] = 0.0f;
+    hit.point[2][1] = 0.0f;
+    hit.point[3][1] = 0.0f;
+    u32 option = 0;
+    if (acc->getStatusModule().getStatusKind() != 0x10b) {
+        option = 0xc000c;
+    }
+    Vec2f* speed = &acc->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(0xFFFF));
+    soPostureModule* const posture = &acc->getPostureModule();
+    static_cast<ftChangeSucceedWork*>(work)->activateDummyFighter(&posture->getPos(), posture->getScale(), posture->getLr(), speed, &hit.point[0][0], &hurt.point[0][0], option);
+}
+
+// BYTES: defined after its first user (see ft/ft_change_succeed_work.h).
+inline wnDummyFighterKineticSettingData::wnDummyFighterKineticSettingData() { }
 
 // ---- the article holders --------------------------------------------------------------------------------------------
 #include <ft/builder/ft_builder_article.h>
