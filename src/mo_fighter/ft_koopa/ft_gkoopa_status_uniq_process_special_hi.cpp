@@ -106,8 +106,7 @@ void ftGKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAcc
         stop.enable();
     }
     if (work.isFlag(0x22000015)) {
-        soMotionChangeParam changeParam(0x1d4, 0.0f, 1.0f, 0, 0, 0, 0);
-        moduleAccesser->getMotionModule().changeMotionRequest(&changeParam);
+        changeKoopaMotion(moduleAccesser, soMotionChangeParam(0x1d4, 0.0f, 1.0f, 0, 0, 0, 0));
         work.offFlag(0x22000015);
     } else if (work.isFlag(0x22000016)) {
         float frame;
@@ -119,13 +118,11 @@ void ftGKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAcc
         } else {
             frame = moduleAccesser->getMotionModule().getFrame();
         }
-        soMotionChangeParam changeParam(0x1d4, 1.0f, 1.0f, 0, 0, 0, 0);
-        moduleAccesser->getMotionModule().changeMotionRequest(&changeParam);
+        changeKoopaMotion(moduleAccesser, soMotionChangeParam(0x1d4, 1.0f, 1.0f, 0, 0, 0, 0));
         moduleAccesser->getMotionModule().setFrameSyncAnimCmd(frame);
         work.offFlag(0x22000016);
     } else {
-        soMotionChangeParam changeParam(0x1d4, 0.0f, 1.0f, 0, 0, 0, 0);
-        moduleAccesser->getMotionModule().changeMotionRequest(&changeParam);
+        changeKoopaMotion(moduleAccesser, soMotionChangeParam(0x1d4, 0.0f, 1.0f, 0, 0, 0, 0));
     }
     if (work.isFlag(0x22000013)) {
         moduleAccesser->getVisibilityModule().set(1, 1);

@@ -30,3 +30,9 @@ static inline ftKoopaSpecialHiParam* getKoopaSpecialHiParam(ftKind kind, int ind
 static inline bool isKoopaFlagOff(soWorkManageModule& work, u32 flag) {
     return !work.isFlag(flag);
 }
+
+// Requests a motion change. BYTES: the parameter block is built as the argument (a temporary placed after the earlier
+// temporaries of the caller) before the motion module is fetched.
+static inline void changeKoopaMotion(soModuleAccesser* moduleAccesser, const soMotionChangeParam& param) {
+    moduleAccesser->getMotionModule().changeMotionRequest(const_cast<soMotionChangeParam*>(&param));
+}
