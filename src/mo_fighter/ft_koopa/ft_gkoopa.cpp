@@ -7,9 +7,13 @@
 #define WN_ARTICLE_MANAGE_BUILDER_OUT_OF_LINE
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
+#define WN_KINETIC_MEDIATOR_INLINE_DTOR
 #define MT_VEC3F_CTOR_NOINLINE // BYTES: the breath offset goes through the out-of-line constructor
 #include <ft/ft_event_unit_instance.h>
 #include <ft/builder/ft_dol_array_list.h>
+// The 292-entry process and anim cmd vectors are whole classes of sora_melee.
+FT_DOL_ARRAY_VECTOR(soStatusUniqProcess*, 292);
+FT_DOL_ARRAY_VECTOR(ftAnimCmdConvPtr, 292);
 #include <ft/ft_class_info_impl.h>
 #include <ft/koopa/ft_gkoopa.h>
 #include <ft/ft_extend_param_accesser.h>
