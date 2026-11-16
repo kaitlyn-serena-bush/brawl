@@ -86,11 +86,13 @@ void ftGKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAcc
         work.offFlag(0x1200003d);
     }
     soItemManageModule& items = moduleAccesser->getItemManageModule();
-    bool visible = isKoopaFlagOff(work, 0x22000013);
+    // BYTES: here the flag and the parameter pointer are plain locals (numbered below the motion module getter of the
+    // resume branch); in the air version the flag goes through the inline helper.
+    bool visible = !work.isFlag(0x22000013);
     items.setHaveItemVisibility(visible, 0);
     items.setAttachItemVisibility(visible, static_cast<itParam::AttachGroup>(0xff));
     Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
-    ftKoopaSpecialHiParam* param = getKoopaSpecialHiParam(Fighter_GKoopa, 2);
+    ftKoopaSpecialHiParam* param = static_cast<ftKoopaSpecialHiParam*>(g_ftCommonDataAccesser.getData(Fighter_GKoopa)->extendParam[2]);
     work.setInt(0, 0x20000000);
     ftKineticEnergyUnable(moduleAccesser);
     if (!work.isFlag(0x22000010)) {
