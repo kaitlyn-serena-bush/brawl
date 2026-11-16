@@ -84,11 +84,11 @@ bool ftKoopa::notifyEventAnimCmd(acAnimCmd* acmd, soModuleAccesser* moduleAccess
     }
     switch (acmd->getType()) {
     case 5:
-        // HYPOTHESIS: command 5 switches back to Bowser (the end of the transformation).
+        // HYPOTHESIS: command 5 switches to Giga Bowser (the transformation of the final smash).
         if (static_cast<u8>(g_ftManager->getFighterCount(m_entryId)) > 1) {
             int fighterNo = g_ftManager->getFighterNo(m_entryId, m_taskId);
             u8 other = (u8)fighterNo == 0 ? 1 : 0;
-            g_ftManager->toChange(m_entryId, other, 1, 0);
+            g_ftManager->toChange(m_entryId, other, true, true);
         }
         return true;
     }
@@ -234,7 +234,7 @@ bool ftKoopa::activeArticle(wnKoopaBreath* weapon, soModuleAccesser* acc) {
 }
 #pragma pool_data reset
 
-// The kinetic settings of the dummy fighter that takes over the move: Giga Bowser hands over fixed limits.
+// The kinetic settings of the dummy fighter that takes over the move while Bowser transforms.
 void ftKoopa::setupChangeSucceedWork(void* work) {
     Fighter::setupChangeSucceedWork(work);
     soModuleAccesser* acc = m_moduleAccesser;
@@ -256,13 +256,9 @@ void ftKoopa::setupChangeSucceedWork(void* work) {
     hit.point[1][1] = 0.0f;
     hit.point[2][1] = 0.0f;
     hit.point[3][1] = 0.0f;
-    u32 option = 0;
-    if (acc->getStatusModule().getStatusKind() != 0x10b) {
-        option = 0xc000c;
-    }
     Vec2f* speed = &acc->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(0xFFFF));
     soPostureModule* const posture = &acc->getPostureModule();
-    static_cast<ftChangeSucceedWork*>(work)->activateDummyFighter(&posture->getPos(), posture->getScale(), posture->getLr(), speed, &hit.point[0][0], &hurt.point[0][0], option);
+    static_cast<ftChangeSucceedWork*>(work)->activateDummyFighter(&posture->getPos(), posture->getScale(), posture->getLr(), speed, &hit.point[0][0], &hurt.point[0][0], 0xc000b);
 }
 
 // BYTES: defined after its first user (see ft/ft_change_succeed_work.h).
