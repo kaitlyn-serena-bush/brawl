@@ -9,7 +9,7 @@
 #define FT_TEAM_TYPED_INTERFACE
 #define WN_KINETIC_MEDIATOR_INLINE_DTOR
 #define SO_KINETIC_ROTATION_FIELDWISE_ZERO // BYTES: the module's copy of soKineticEnergyNormal::getRotation writes three float zeros
-#define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
+
 #include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
 // The 291-entry process vector is a whole class of sora_melee (the anim cmd one is declared in the list header).

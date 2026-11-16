@@ -26,7 +26,7 @@
 
 #include <ft/koopa/ft_koopa_special_s.h>
 ftKoopaLinkEventFlyingSlam::ftKoopaLinkEventFlyingSlam(int kind, int arg, bool flag) :
-    soLinkEventArgs(kind), unk8(arg), unkC(-1), unk10(-1), unk14(-1), unk18(0.0f), unk1C(flag) { }
+    soLinkEventArgs(kind), unk8(arg), unkC(-1), unk10(-1), unk14(-1), unk18(1.0f), unk1C(flag) { }
 
 
 // Switches the four kinetic energies of the fighter off (each status file of the module has its own static copy).
