@@ -8,6 +8,7 @@
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
 #define WN_KINETIC_MEDIATOR_INLINE_DTOR
+#define SO_KINETIC_ROTATION_FIELDWISE_ZERO // BYTES: the module's copy of soKineticEnergyNormal::getRotation writes three float zeros
 #define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
 #include <ft/ft_event_unit_instance.h> // before the event system headers (ft/ft_manager.h is included below)
 #include <ft/builder/ft_dol_array_list.h>
@@ -38,7 +39,20 @@ void ftKoopa::change(void* work, int startKind) {
 
 #include <so/so_slow.h>
 
-template <class T> T (CLAMP)(T value, T minimum, T maximum);
+// Clamps value to [minimum, maximum] with two floating selects (the link map lists it as this file's CLAMP<float>;
+// Giga Bowser's file calls this copy). HYPOTHESIS: written as an asm block, as Game & Watch's clampf: nw4r's FSelect is
+// not expanded at the fighter units' optimization level and the __fsel intrinsic adds two frsp.
+template <class T> T (CLAMP)(register T value, register T minimum, register T maximum) {
+    register T lower;
+    register T result;
+    asm {
+        fsubs lower, value, minimum
+        fsel lower, lower, value, minimum
+        fsubs result, lower, maximum
+        fsel result, result, maximum, lower
+    }
+    return result;
+}
 
 void ftKoopa::processUpdate() {
     Fighter::processUpdate();
@@ -142,6 +156,14 @@ template soArrayVector<s32, 8>::~soArrayVector();
 #endif
 #pragma dont_inline off
 soStatusModuleImpl::~soStatusModuleImpl() { }
+
+ftKineticEnergyController::~ftKineticEnergyController() { }
+
+// ftManager::setParamPattern selects the shared parameter-table variation.
+extern int g_soValueVariation;
+#pragma dont_inline on
+int soValueAccesser::getValueVariation() { return g_soValueVariation; }
+#pragma dont_inline off
 
 // HYPOTHESIS: unnamed status process instances (not yet named in symbols.txt).
 extern "C" {
@@ -361,3 +383,13 @@ bool ftKoopaArticleMediator::shoot(soModuleAccesser* acc, soArticle* article) {
     default: return false;
     }
 }
+
+// The module's own copies of these empty destructors (the first unit of the module emits them).
+#pragma dont_inline on
+soTeam::~soTeam() { }
+soResourceIdAccesser::~soResourceIdAccesser() { }
+#pragma dont_inline off
+soArticleMediator::~soArticleMediator() { }
+#pragma dont_inline on
+ftVirtualNodeMatrixPool::~ftVirtualNodeMatrixPool() { }
+#pragma dont_inline off

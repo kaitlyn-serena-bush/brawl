@@ -50,7 +50,7 @@ public:
 class wnKoopaBreath;
 
 class ftKoopa : public ftFighterBuilder<ftKoopaBuildConfig> {
-    u8 unkTail[0x1416C - sizeof(ftFighterBuilder<ftKoopaBuildConfig>)];
+
     soArrayContractibleTable<const soStatusData> m_statusDataTable;
     ftData* m_data;
 public:
