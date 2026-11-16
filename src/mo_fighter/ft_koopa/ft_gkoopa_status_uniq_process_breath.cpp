@@ -97,16 +97,18 @@ void ftGKoopaStatusUniqProcessBreath::execStatus(soModuleAccesser* moduleAccesse
             float minAngle = soValueAccesser::getConstantFloat(moduleAccesser, 0xfa3, 0);
             float rate = soValueAccesser::getConstantFloat(moduleAccesser, 0xfa4, 0);
             angle += rate * stickY;
+            // The clamp of Bowser's sora_melee twin (clampf: two nw4r FSelect), expanded here in the original.
+            // BYTES: written as asm statements. nw4r::math::FSelect is an asm inline that this compiler setup does not
+            // expand at the fighter units' optimization level (a call results), and the __fsel intrinsic adds two frsp;
+            // the same holds for CLAMP<float> in ft_koopa.cpp and Game & Watch's clampf.
             register float limitHigh = maxAngle;
             register float value = angle;
             register float limitLow = -minAngle;
-            register float fromLower = value - limitLow;
-            register float bounded;
-            // MATCH-ONLY: the fighter units are built without inlining of the nw4r FSelect asm helper.
-            asm { fsel bounded, fromLower, value, limitLow }
-            register float fromUpper = bounded - limitHigh;
+            register float lower = value - limitLow;
+            asm { fsel lower, lower, value, limitLow }
+            register float upper = lower - limitHigh;
             register float clamped;
-            asm { fsel clamped, fromUpper, limitHigh, bounded }
+            asm { fsel clamped, upper, limitHigh, lower }
             angle = clamped;
             moduleAccesser->getWorkManageModule().setFloat(angle, 0x21000004);
         }
