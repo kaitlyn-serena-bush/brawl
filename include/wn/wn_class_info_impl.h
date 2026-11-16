@@ -66,6 +66,7 @@ class wnPokeFushigisouSeed;
 class wnPokeZenigameWater;
 class wnLucarioAuraBall;
 class wnKoopaBreath;
+struct wnKoopaBreathData;
 class wnDummyFighter;
 class wnPeachKinopio;
 class wnLinkBow;
