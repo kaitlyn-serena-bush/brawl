@@ -1,6 +1,7 @@
 #define SO_STATUS_UNIQ_PROCESS_OUT_OF_LINE
 #define MT_VEC2F_CTOR_NOINLINE // BYTES: the original builds the clamped speed pair through the out-of-line constructor
 #define MT_VEC2F_ASSIGN_NOINLINE // BYTES: ... and assigns it through the out-of-line operator=
+#include <ft/koopa/ft_koopa_breath_status.h>
 #include <ft/ft_common_data_accesser.h>
 #include <ft/ft_kinetic_energy.h>
 #include <ft/ft_kinetic_energy_controller.h>
@@ -69,17 +70,19 @@ void ftGKoopaStatusUniqProcessBreath::execStatus(soModuleAccesser* moduleAccesse
                 moduleAccesser->getSoundModule().setSEVol(handle, volume, 0);
             }
             soControllerModule& controller = moduleAccesser->getControllerModule();
-            int rumbleKind = 1;
+            ftKoopaBreathRumbleKind rumbleKind;
             if (ratio > 0.5f) {
-                rumbleKind = 0;
+                rumbleKind = FtKoopaBreathRumble_Strong;
+            } else {
+                rumbleKind = FtKoopaBreathRumble_Weak;
             }
             controller.setRumble(rumbleKind, 0, true, -1);
         }
-        int next = cycle + 1;
-        if (next >= soValueAccesser::getConstantInt(moduleAccesser, 0x5dc5, 0)) {
-            next = 0;
+        cycle++;
+        if (cycle >= soValueAccesser::getConstantInt(moduleAccesser, 0x5dc5, 0)) {
+            cycle = 0;
         }
-        moduleAccesser->getWorkManageModule().setInt(next, 0x20000004);
+        moduleAccesser->getWorkManageModule().setInt(cycle, 0x20000004);
         if (ratio > 0.5f) {
             if (frame % soValueAccesser::getConstantInt(moduleAccesser, 0x5dc4, 0) == 0) {
                 moduleAccesser->getCameraModule().reqQuake(static_cast<soCameraModule::QuakeKind>(0), moduleAccesser);
@@ -88,7 +91,7 @@ void ftGKoopaStatusUniqProcessBreath::execStatus(soModuleAccesser* moduleAccesse
         moduleAccesser->getWorkManageModule().setInt(frame + 1, 0x20000000);
         float angle = moduleAccesser->getWorkManageModule().getFloat(0x21000004);
         float stickY = moduleAccesser->getControllerModule().getStickY();
-        double stickMagnitude = fabs(stickY); // MATCH-ONLY: narrowed to float before the compare
+        double stickMagnitude = fabs(stickY); // the wide absolute value is narrowed for the compare (fabs + frsp)
         if ((float)stickMagnitude > 0.5f) {
             float maxAngle = soValueAccesser::getConstantFloat(moduleAccesser, 0xfa2, 0);
             float minAngle = soValueAccesser::getConstantFloat(moduleAccesser, 0xfa3, 0);
