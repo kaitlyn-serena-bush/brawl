@@ -120,12 +120,15 @@ bool wnKoopaBreath::notifyEventAnimCmd(acAnimCmd* cmd, soModuleAccesser* moduleA
         float turn = 0.0f;
         if (diff != 0.0f) {
             float between = normal.angle(&speed);
+            // BYTES: the right angle is also kept in a local that the compare does not read (the compare takes the
+            // literal): that local's initialisation is what places PI/2 ahead of the two rates in the constant pool.
+            // HYPOTHESIS: the original compared against a macro constant next to its three local constants.
             float half = 1.5707964f;
             double wide = fabs(between);
             float rate = wide;
             const float near = 0.02f;
             const float far = 0.5f;
-            if (rate < half) {
+            if (rate < 1.5707964f) {
                 rate = near * (rate / 3.1415927f);
             } else {
                 rate = far * (rate / 3.1415927f);
