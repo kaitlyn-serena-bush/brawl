@@ -66,7 +66,7 @@ void ftGKoopaStatusUniqProcessBreath::execStatus(soModuleAccesser* moduleAccesse
                 if (ratio < minVolume) {
                     volume = minVolume;
                 }
-                moduleAccesser->getSoundModule().setSEVol(volume, handle, 0);
+                moduleAccesser->getSoundModule().setSEVol(handle, volume, 0);
             }
             soControllerModule& controller = moduleAccesser->getControllerModule();
             int rumbleKind = 1;
