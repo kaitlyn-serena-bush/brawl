@@ -353,7 +353,7 @@ bool ftGKoopa::activeArticle(wnGKoopaBreath* weapon, soModuleAccesser* acc) {
     float spread = soValueAccesser::getConstantFloat(acc, 0xfa1, 0);
     angle = baseAngle + angle;
     angle += randf() * spread - 0.5f * spread;
-    weapon->activate(acc->getStageObject().m_taskId, fighter.getOwner()->getTeam(), &pos, 0, lr, speed, size, speedMul, 0.017453292f * angle);
+    weapon->activate(acc->getStageObject().m_taskId, fighter.getOwner()->getTeam(), &pos, lr, 0, speed, size, speedMul, 0.017453292f * angle);
     return false;
 }
 
