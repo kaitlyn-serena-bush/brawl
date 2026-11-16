@@ -8,6 +8,7 @@
 #define FT_PARAM_ACCESSER_TYPED_DTOR
 #define FT_TEAM_TYPED_INTERFACE
 #define WN_KINETIC_MEDIATOR_INLINE_DTOR
+#define FT_MODULE_ACCESSER_BUILDER_BASE_BUILD_DATA // the builder takes the base build data: its slope limit literal (20.0) stays in the pool
 #define MT_VEC3F_CTOR_NOINLINE // BYTES: the breath offset goes through the out-of-line constructor
 #include <ft/ft_event_unit_instance.h>
 #include <ft/builder/ft_dol_array_list.h>
@@ -353,14 +354,15 @@ bool ftGKoopa::activeArticle(wnGKoopaBreath* weapon, soModuleAccesser* acc) {
     float speedMul = 1.0f;
     float* param = static_cast<float*>(g_ftCommonDataAccesser.getGKoopaBreathParam(kind));
     float angle = acc->getWorkManageModule().getFloat(0x21000004);
-    pos = acc->getModelModule().getNodeGlobalPosition(0x30, &Vec3f(0.0f, param[0x48 / 4], param[0x44 / 4]), false, false);
+    Vec3f offset(0.0f, param[0x48 / 4], param[0x44 / 4]);
+    pos = acc->getModelModule().getNodeGlobalPosition(0x30, &offset, false, false);
     float speed = acc->getWorkManageModule().getFloat(0x11000014) / soValueAccesser::getConstantFloat(acc, 0xfa6, 0);
     float size = acc->getWorkManageModule().getFloat(0x11000013) / soValueAccesser::getConstantFloat(acc, 0xfa8, 0);
     float baseAngle = soValueAccesser::getConstantFloat(acc, 0xfa0, 0);
     float spread = soValueAccesser::getConstantFloat(acc, 0xfa1, 0);
     angle = baseAngle + angle;
     angle += randf() * spread - 0.5f * spread;
-    weapon->activate(acc->getStageObject().m_taskId, fighter.getOwner()->getTeam(), &pos, lr, 0, speed, size, speedMul, 0.017453292f * angle);
+    weapon->activate(acc->getStageObject().getTaskId(), fighter.getOwner()->getTeam(), &pos, lr, 0, speed, size, speedMul, 0.017453292f * angle);
     return false;
 }
 
