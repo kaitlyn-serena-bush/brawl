@@ -89,7 +89,7 @@ void ftKoopaStatusUniqProcessSpecialHiG::initStatus(soModuleAccesser* moduleAcce
         work.offFlag(0x1200003d);
     }
     soItemManageModule& items = moduleAccesser->getItemManageModule();
-    bool visible = !work.isFlag(0x22000013);
+    bool visible = isKoopaFlagOff(work, 0x22000013);
     items.setHaveItemVisibility(visible, 0);
     items.setAttachItemVisibility(visible, static_cast<itParam::AttachGroup>(0xff));
     Vec2f speed = moduleAccesser->getKineticModule().getSumSpeed(soKineticEnergy::AttributeFlag(1));
@@ -179,7 +179,7 @@ void ftKoopaStatusUniqProcessSpecialHiA::initStatus(soModuleAccesser* moduleAcce
         work.offFlag(0x1200003d);
     }
     soItemManageModule& items = moduleAccesser->getItemManageModule();
-    bool visible = !work.isFlag(0x22000013);
+    bool visible = isKoopaFlagOff(work, 0x22000013);
     items.setHaveItemVisibility(visible, 0);
     items.setAttachItemVisibility(visible, static_cast<itParam::AttachGroup>(0xff));
     work.setInt(0, 0x20000000);
@@ -239,7 +239,8 @@ void ftKoopaStatusUniqProcessSpecialHiA::exitStatus(soModuleAccesser* moduleAcce
             }
         }
     } else {
-        work.setFloat(getKoopaSpecialHiParam(Fighter_Koopa, 1)->unk2C, 0x11000000);
+        ftData* data = g_ftCommonDataAccesser.getData(Fighter_Koopa);
+        work.setFloat(static_cast<ftKoopaSpecialHiParam*>(data->extendParam[1])->unk2C, 0x11000000);
     }
 }
 

@@ -24,3 +24,9 @@ struct ftKoopaSpecialHiParam {
 static inline ftKoopaSpecialHiParam* getKoopaSpecialHiParam(ftKind kind, int index) {
     return static_cast<ftKoopaSpecialHiParam*>(g_ftCommonDataAccesser.getData(kind)->extendParam[index]);
 }
+
+// True while a work flag is off. BYTES: the result of the inline helper is a compiler temporary, which is what gives the
+// item visibility flag its early saved register in the Special Hi initStatus functions.
+static inline bool isKoopaFlagOff(soWorkManageModule& work, u32 flag) {
+    return !work.isFlag(flag);
+}
