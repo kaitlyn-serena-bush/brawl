@@ -64,7 +64,11 @@ class wnKoopaBreath : public Weapon {
 public:
     const wnKoopaBreathParam* m_param; // +0x1F7C
     wnKoopaBreath(s32 articleId, const wnArticleBuildInfo& info, const wnKoopaBreathData* data);
+#ifdef WN_WEAPON_BUILDER
+    virtual ~wnKoopaBreath() { }
+#else
     virtual ~wnKoopaBreath();
+#endif
     virtual void updateNodeSRT();
     virtual bool notifyEventAnimCmd(acAnimCmd* cmd, soModuleAccesser* moduleAccesser, int index);
     virtual bool notifyEventCollisionAttackCheck(u32 flags);

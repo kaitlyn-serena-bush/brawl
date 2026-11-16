@@ -156,5 +156,4 @@ bool wnKoopaBreath::notifyEventCollisionAttackCheck(u32 flags) {
     return Weapon::notifyEventCollisionAttackCheck(flags);
 }
 
-// The destructor expands the simple module builders down to their impl destructors; the big ones stay calls.
-wnKoopaBreath::~wnKoopaBreath() { }
+
