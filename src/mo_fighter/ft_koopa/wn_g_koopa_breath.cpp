@@ -103,11 +103,13 @@ bool wnGKoopaBreath::notifyEventAnimCmd(acAnimCmd* cmd, soModuleAccesser* module
         float turn = 0.0f;
         if (diff != 0.0f) {
             float between = normal.angle(&speed);
+            float half;
             double wide = fabs(between);
             float rate = wide;
+            half = 1.5707964f;
             const float near = 0.02f;
             const float far = 0.5f;
-            if (rate < 1.5707964f) {
+            if (rate < half) {
                 rate = near * (rate / 3.1415927f);
             } else {
                 rate = far * (rate / 3.1415927f);

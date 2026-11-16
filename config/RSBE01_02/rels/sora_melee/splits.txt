@@ -12341,7 +12341,7 @@ mo_melee/sora_melee/ft/ft_koopa_status_uniq_process_breath.cpp:
 	.ctors      start:0x000003EC end:0x000003F0
 
 mo_melee/sora_melee/wn/wn_koopa_breath.cpp:
-	.text       start:0x0032F0D0 end:0x00330E1C
+	.text       start:0x0032F0D0 end:0x003312B0
 	.ctors      start:0x000003F0 end:0x000003F4
 
 mo_melee/sora_melee/ft/ft_peach_transactor.cpp:
