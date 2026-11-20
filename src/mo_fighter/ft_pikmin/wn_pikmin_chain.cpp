@@ -49,7 +49,7 @@ wnPikminChain::wnPikminChain(s32 articleId, const wnArticleBuildInfo& info, cons
     Weapon::deactivate(false);
 }
 
-void wnPikminChain::activate(float lr, int founderTaskId, int kind, int team, bool unk, int pikminNum) {
+void wnPikminChain::activate(int founderTaskId, int kind, int team, float lr, bool unk, int pikminNum) {
     Vec3f zero(0.0f, 0.0f, 0.0f);
     wnActivateDesc desc(founderTaskId, kind, kind, kind, -1, -1, 0, 0, zero, lr, team, 0, 2, 0x80, 0, 0x35f, 0);
     // The two top bits of each flag byte are separate one-bit flags: the original writes them one at a time.
